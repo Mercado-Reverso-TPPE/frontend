@@ -1,0 +1,8 @@
+.git
+.git/**
+**/node_modules
+**/dist
+**/.env*
+*.zip
+README.md
+LICENSE
