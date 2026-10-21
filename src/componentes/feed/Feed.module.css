@@ -164,6 +164,54 @@
   padding: 10px 0;
 }
 
+/* ── Resumo da lista ────────────────────────── */
+.resumo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-1-5);
+  margin-bottom: 20px;
+}
+
+.resumoTitulo {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-h2);
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+.selecaoEnvolvente {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.selecao {
+  appearance: none;
+  padding: 7px 30px 7px 12px;
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-botao);
+  background-color: var(--fundo-elevado);
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-semibold);
+  color: var(--texto-primario);
+  cursor: pointer;
+}
+
+.selecao:hover {
+  border-color: var(--laranja);
+}
+
+.setaDaSelecao {
+  position: absolute;
+  right: 9px;
+  display: flex;
+  pointer-events: none;
+}
+
 /* ── Grade e carrossel ──────────────────────── */
 .grade {
   display: grid;

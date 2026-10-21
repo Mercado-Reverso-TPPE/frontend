@@ -133,6 +133,9 @@ export function Cabecalho() {
             <Botao variante="secundario" para="/entrar">
               Entrar
             </Botao>
+            <Botao className={estilos.cadastrar} para="/cadastrar">
+              Cadastrar
+            </Botao>
           </div>
         )}
 

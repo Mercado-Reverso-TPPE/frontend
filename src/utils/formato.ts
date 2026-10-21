@@ -34,3 +34,9 @@ export const fmtNumero = (valor: number) => valor.toLocaleString("pt-BR");
 /** Pluralização simples: `fmtPlural(2, "oferta")` → `2 ofertas`. */
 export const fmtPlural = (quantidade: number, singular: string, plural = `${singular}s`) =>
   `${fmtNumero(quantidade)} ${quantidade === 1 ? singular : plural}`;
+
+/** Métrica de vitrine: milhar cheio abaixo de 10 mil, compacto acima. */
+export const fmtMetrica = (valor: number) =>
+  valor >= 10000
+    ? `${(valor / 1000).toFixed(valor % 1000 === 0 ? 0 : 1).replace(".", ",")}k`
+    : fmtNumero(valor);

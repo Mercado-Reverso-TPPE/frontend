@@ -13,31 +13,26 @@
 
 .info {
   background-color: var(--info-superficie);
-  border-color: color-mix(in srgb, var(--info) 25%, transparent);
   color: var(--info);
 }
 
 .marca {
   background-color: var(--laranja-claro);
-  border-color: var(--laranja-borda);
   color: var(--laranja);
 }
 
 .sucesso {
   background-color: var(--sucesso-superficie);
-  border-color: var(--sucesso-borda);
   color: var(--sucesso-texto);
 }
 
 .erro {
   background-color: var(--erro-superficie);
-  border-color: color-mix(in srgb, var(--erro) 25%, transparent);
   color: var(--erro);
 }
 
 .aviso {
   background-color: color-mix(in srgb, var(--aviso) 12%, transparent);
-  border-color: color-mix(in srgb, var(--aviso) 30%, transparent);
   color: #9A5B00;
 }
 

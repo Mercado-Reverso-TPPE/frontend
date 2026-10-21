@@ -45,9 +45,7 @@ export function CardVendendo({ anuncio }: { anuncio: SellerAd }) {
           </Link>
         </h3>
 
-        <p className={`${estilos.descricao} truncar-2`} style={{ flex: 1 }}>
-          {anuncio.description}
-        </p>
+        <p className={`${estilos.descricao} truncar-2`}>{anuncio.description}</p>
 
         <div className={estilos.linhaPreco}>
           <span className={estilos.preco}>{fmtPrice(anuncio.price)}</span>
@@ -78,7 +76,7 @@ export function CardVendendo({ anuncio }: { anuncio: SellerAd }) {
             </div>
           </div>
           <Botao
-            variante="secundario"
+            variante="suave"
             tamanho="pequeno"
             className={estilos.acao}
             para={`/anuncios/${anuncio.id}/ofertar`}

@@ -5,7 +5,7 @@
   justify-content: center;
   min-height: 100vh;
   padding: var(--espaco-3) var(--espaco-2);
-  background-color: var(--laranja-claro);
+  background-color: var(--fundo-autenticacao);
   font-family: var(--fonte-corpo);
 }
 

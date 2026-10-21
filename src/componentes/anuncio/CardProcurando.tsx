@@ -66,7 +66,7 @@ export function CardProcurando({ anuncio }: { anuncio: BuyerAd }) {
         </div>
 
         <Botao
-          variante="secundario"
+          variante="suave"
           tamanho="pequeno"
           className={estilos.acao}
           para={`/anuncios/${anuncio.id}/ofertar`}

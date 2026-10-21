@@ -2,7 +2,14 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router";
 import estilos from "./Botao.module.css";
 
-export type VarianteDeBotao = "primario" | "secundario" | "texto" | "perigo" | "flutuante";
+export type VarianteDeBotao =
+  | "primario"
+  | "secundario"
+  /** Fundo neutro: ações dentro de cards, onde o card já reage ao hover. */
+  | "suave"
+  | "texto"
+  | "perigo"
+  | "flutuante";
 export type TamanhoDeBotao = "pequeno" | "medio" | "grande";
 
 interface PropsComuns {
