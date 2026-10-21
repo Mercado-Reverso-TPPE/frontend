@@ -1,0 +1,43 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espaco-0-5);
+  flex-shrink: 0;
+  padding: 6px 13px;
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-chip);
+  background-color: var(--fundo-elevado);
+  color: var(--texto-secundario);
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transicao), background-color var(--transicao), color var(--transicao);
+}
+
+.chip:hover {
+  border-color: var(--laranja);
+  color: var(--laranja);
+}
+
+.ativo {
+  border-color: var(--laranja);
+  background-color: var(--laranja-claro);
+  color: var(--laranja);
+  font-weight: var(--peso-bold);
+}
+
+.contagem {
+  padding: 1px 6px;
+  border-radius: var(--raio-chip);
+  background-color: var(--superficie-suave);
+  color: var(--texto-terciario);
+  font-size: var(--tamanho-micro);
+  font-weight: var(--peso-semibold);
+}
+
+.ativo .contagem {
+  background-color: var(--laranja);
+  color: var(--texto-invertido);
+}

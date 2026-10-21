@@ -1,0 +1,124 @@
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-1);
+  border: 1.5px solid transparent;
+  border-radius: var(--raio-botao);
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-semibold);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transicao), border-color var(--transicao), color var(--transicao);
+  white-space: nowrap;
+}
+
+.botao[aria-disabled="true"],
+.botao:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Tamanhos ───────────────────────────────── */
+.pequeno {
+  padding: 7px 14px;
+  font-size: var(--tamanho-meta);
+}
+
+.medio {
+  padding: 10px 18px;
+  font-size: var(--tamanho-corpo);
+}
+
+.grande {
+  padding: 13px 26px;
+  font-size: var(--tamanho-h3);
+}
+
+.larguraTotal {
+  width: 100%;
+}
+
+/* ── Variantes ──────────────────────────────── */
+.primario {
+  background: var(--gradiente-marca);
+  color: var(--texto-invertido);
+  box-shadow: var(--sombra-marca);
+  font-weight: var(--peso-bold);
+}
+
+.primario:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--laranja-hover);
+}
+
+.secundario {
+  background-color: transparent;
+  border-color: var(--borda);
+  color: var(--texto-primario);
+}
+
+.secundario:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--laranja);
+  color: var(--laranja);
+}
+
+.texto {
+  background: none;
+  border-color: transparent;
+  color: var(--laranja);
+  padding-inline: var(--espaco-0-5);
+}
+
+.texto:hover:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--laranja-hover);
+  text-decoration: underline;
+}
+
+.perigo {
+  background-color: transparent;
+  border-color: var(--borda);
+  color: var(--erro);
+}
+
+.perigo:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--erro);
+  background-color: var(--erro-superficie);
+}
+
+.flutuante {
+  position: fixed;
+  right: var(--espaco-3);
+  bottom: var(--espaco-3);
+  z-index: var(--z-flutuante);
+  padding: 14px 22px;
+  background: var(--gradiente-marca);
+  color: var(--texto-invertido);
+  border-radius: var(--raio-chip);
+  font-size: var(--tamanho-h3);
+  font-weight: var(--peso-bold);
+  box-shadow: 0 6px 24px rgba(217, 115, 56, 0.45);
+}
+
+/* ── Carregando ─────────────────────────────── */
+.girando {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .girando {
+    animation-duration: 2s;
+  }
+}

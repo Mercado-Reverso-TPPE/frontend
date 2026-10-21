@@ -1,0 +1,167 @@
+/* ──────────────────────────────────────────────────────────────
+   Quero. — tokens da identidade visual
+   Fonte única de verdade para cor, tipografia, espaçamento e
+   métricas de layout. Espelha docs/interface/identidade-visual.md.
+   Nenhum valor de marca deve ser escrito fora deste arquivo.
+   ────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Marca ─────────────────────────────────────────────── */
+  --laranja: #D97338;
+  --laranja-hover: #C25F27;
+  --laranja-claro: #FBF1EA;
+  --laranja-borda: #F5D5C0;
+
+  /* ── Cores funcionais ──────────────────────────────────── */
+  --sucesso: #34C759;
+  --sucesso-superficie: #F0FBF4;
+  --sucesso-borda: #D1F0DC;
+  --sucesso-texto: #1A7A38;
+  --sucesso-texto-suave: #2A9449;
+
+  --erro: #FF3B30;
+  --erro-superficie: #FFF0EF;
+
+  --info: #007AFF;
+  --info-superficie: #F0F8FF;
+
+  --aviso: #FF9500;
+  --estrela: #FFD60A;
+
+  /* ── Texto (modo claro) ────────────────────────────────── */
+  --texto-primario: #1A1A1A;
+  --texto-secundario: #666666;
+  --texto-terciario: #999999;
+  --texto-invertido: #FFFFFF;
+
+  /* ── Superfícies e bordas (modo claro) ─────────────────── */
+  --fundo: #FFFFFF;
+  --fundo-elevado: #FFFFFF;
+  --superficie: #F8F8F8;
+  --superficie-suave: #F0F0F0;
+  --borda: #E8E8E8;
+  --borda-suave: #F4F4F4;
+
+  /* ── Categorias (taxonomia do anúncio) ─────────────────── */
+  --cat-eletronicos: #007AFF;
+  --cat-veiculos: #34C759;
+  --cat-informatica: #5856D6;
+  --cat-games: #FF2D55;
+  --cat-esportes: #30B0D0;
+  --cat-casa-jardim: #FF9500;
+  --cat-instrumentos: #FFD60A;
+  --cat-outros: #8E8E93;
+
+  /* ── Tipografia ────────────────────────────────────────── */
+  --fonte-titulo: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --fonte-corpo: "Inter", "Segoe UI", system-ui, sans-serif;
+  --fonte-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --tamanho-h1: 32px;
+  --tamanho-h2: 18px;
+  --tamanho-h3: 16px;
+  --tamanho-preco: 20px;
+  --tamanho-corpo: 14px;
+  --tamanho-meta: 12px;
+  --tamanho-micro: 11px;
+
+  --peso-regular: 400;
+  --peso-medio: 500;
+  --peso-semibold: 600;
+  --peso-bold: 700;
+
+  --altura-linha-titulo: 1.25;
+  --altura-linha-corpo: 1.6;
+
+  /* ── Espaçamento (múltiplos de 8) ──────────────────────── */
+  --espaco: 8px;
+  --espaco-0-5: 4px;
+  --espaco-1: 8px;
+  --espaco-1-5: 12px;
+  --espaco-2: 16px;
+  --espaco-3: 24px;
+  --espaco-4: 32px;
+  --espaco-5: 40px;
+  --espaco-cards: 16px;
+
+  /* ── Raios de borda ────────────────────────────────────── */
+  --raio-card: 12px;
+  --raio-botao: 8px;
+  --raio-chip: 999px;
+  --raio-campo: 8px;
+  --raio-modal: 16px;
+
+  /* ── Métricas de layout ────────────────────────────────── */
+  --largura-conteudo: 1280px;
+  --respiro-lateral: 24px;
+  --altura-cabecalho: 64px;
+  --largura-minima: 360px;
+  --largura-card-minima: 340px;
+
+  /* ── Sombras ───────────────────────────────────────────── */
+  --sombra-sm: 0 1px 4px rgba(0, 0, 0, 0.05);
+  --sombra-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sombra-marca: 0 4px 16px rgba(217, 115, 56, 0.25);
+  --sombra-card-hover: 0 8px 32px rgba(217, 115, 56, 0.1);
+
+  /* ── Gradientes da marca ───────────────────────────────── */
+  --gradiente-marca: linear-gradient(135deg, #E8803F, #D97338);
+  --gradiente-faixa: linear-gradient(135deg, #D97338 0%, #C4622B 100%);
+  --gradiente-hero: linear-gradient(135deg, #FDF3EC 0%, #FEF8F5 60%, #FFFFFF 100%);
+  --borda-hero: #F0E4D8;
+
+  /* ── Movimento e foco ──────────────────────────────────── */
+  --transicao: 150ms ease;
+  --transicao-lenta: 300ms ease;
+  --foco-cor: var(--laranja);
+  --foco-largura: 3px;
+  --foco-deslocamento: 2px;
+
+  /* ── Camadas ───────────────────────────────────────────── */
+  --z-cabecalho: 50;
+  --z-filtros: 40;
+  --z-flutuante: 100;
+
+  color-scheme: light;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Modo escuro — paleta documentada na identidade visual.
+   Ativa com data-tema="escuro" no <html>. As telas exportadas do
+   Figma ainda carregam cores literais; o alternador de tema só
+   deve ser exposto depois que elas passarem a usar estes tokens.
+   ────────────────────────────────────────────────────────────── */
+:root[data-tema="escuro"] {
+  --texto-primario: #EDEDED;
+  --texto-secundario: #A0A0A0;
+  --texto-terciario: #707070;
+
+  --fundo: #0F0F0F;
+  --fundo-elevado: #161616;
+  --superficie: #1A1A1A;
+  --superficie-suave: #202020;
+  --borda: #2A2A2A;
+  --borda-suave: #222222;
+
+  --laranja-claro: #2A1B12;
+  --laranja-borda: #4A2E1C;
+  --sucesso-superficie: #122017;
+  --sucesso-borda: #1F3A28;
+  --sucesso-texto: #5FD47E;
+  --sucesso-texto-suave: #4CC46D;
+  --erro-superficie: #2A1413;
+  --info-superficie: #0F1A2A;
+
+  --gradiente-hero: linear-gradient(135deg, #1A120C 0%, #141010 60%, #0F0F0F 100%);
+  --borda-hero: #2A1B12;
+
+  color-scheme: dark;
+}
+
+/* Respeita quem pede menos movimento (RNF de acessibilidade). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transicao: 0ms;
+    --transicao-lenta: 0ms;
+  }
+}

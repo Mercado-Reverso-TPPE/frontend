@@ -1,0 +1,296 @@
+/* ── Hero ───────────────────────────────────── */
+.hero {
+  padding-block: var(--espaco-3);
+  background: var(--gradiente-hero);
+  border-bottom: 1px solid var(--borda-hero);
+}
+
+.heroFaixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-3);
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding-inline: var(--respiro-lateral);
+}
+
+.heroTexto {
+  flex: 1;
+  min-width: 280px;
+}
+
+.heroTitulo {
+  margin: 0 0 var(--espaco-1);
+  font-family: var(--fonte-titulo);
+  font-size: 26px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+  letter-spacing: -0.7px;
+  line-height: 1.2;
+}
+
+.heroDestaque {
+  color: var(--laranja);
+}
+
+.heroApoio {
+  margin: 0;
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-secundario);
+}
+
+.metricas {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.metrica {
+  padding: var(--espaco-1-5) 22px;
+  text-align: center;
+}
+
+.metrica + .metrica {
+  border-left: 1px solid var(--borda-hero);
+}
+
+.metricaValor {
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-preco);
+  font-weight: var(--peso-bold);
+  color: var(--laranja);
+  line-height: 1;
+}
+
+.metricaRotulo {
+  margin-top: 2px;
+  font-family: var(--fonte-corpo);
+  font-size: 10px;
+  font-weight: var(--peso-medio);
+  color: var(--texto-terciario);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Barra de filtros ───────────────────────── */
+.barra {
+  position: sticky;
+  top: var(--altura-cabecalho);
+  z-index: var(--z-filtros);
+  background-color: var(--fundo-elevado);
+  border-bottom: 1px solid var(--borda);
+}
+
+.barraFaixa {
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding-inline: var(--respiro-lateral);
+}
+
+.linhaDeTipos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 0 6px;
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.tipos {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+}
+
+.tipo {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 9px;
+  background-color: transparent;
+  color: var(--texto-secundario);
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transicao), color var(--transicao);
+}
+
+.tipo:hover {
+  color: var(--texto-primario);
+}
+
+.tipoAtivo {
+  background-color: var(--texto-primario);
+  color: var(--fundo-elevado);
+}
+
+.separador {
+  width: 1px;
+  height: 18px;
+  margin-inline: 6px;
+  background-color: var(--borda);
+}
+
+.resultados {
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.ordenar {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-1);
+  margin-left: auto;
+}
+
+.ordenarRotulo {
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 0;
+}
+
+/* ── Grade e carrossel ──────────────────────── */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--largura-card-minima), 1fr));
+  gap: var(--espaco-cards);
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+.secaoTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+}
+
+.secaoIdentidade {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acento {
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background-color: var(--laranja);
+}
+
+.acentoInfo {
+  background-color: var(--info);
+}
+
+.secaoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 17px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+  letter-spacing: -0.3px;
+}
+
+.secaoSubtitulo {
+  margin: 1px 0 0;
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.setas {
+  display: flex;
+  gap: 6px;
+}
+
+.seta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--borda);
+  border-radius: 50%;
+  background-color: var(--fundo-elevado);
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: border-color var(--transicao), color var(--transicao);
+}
+
+.seta:hover {
+  border-color: var(--laranja);
+  color: var(--laranja);
+}
+
+.trilha {
+  display: flex;
+  gap: var(--espaco-1-5);
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* ── Faixa de conversão ─────────────────────── */
+.faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  padding: 26px var(--espaco-4);
+  border-radius: var(--raio-modal);
+  background: var(--gradiente-faixa);
+  box-shadow: 0 8px 24px rgba(217, 115, 56, 0.28);
+  text-decoration: none;
+}
+
+.faixaTitulo {
+  margin: 0 0 6px;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-preco);
+  font-weight: var(--peso-bold);
+  color: var(--texto-invertido);
+  letter-spacing: -0.4px;
+}
+
+.faixaApoio {
+  margin: 0;
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-corpo);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.faixaAcao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-1);
+  flex-shrink: 0;
+  padding: var(--espaco-1-5) var(--espaco-3);
+  border-radius: 10px;
+  background-color: var(--fundo-elevado);
+  font-family: var(--fonte-titulo);
+  font-size: 15px;
+  font-weight: var(--peso-bold);
+  color: var(--laranja);
+}
