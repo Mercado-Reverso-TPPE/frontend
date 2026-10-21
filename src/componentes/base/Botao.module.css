@@ -63,6 +63,12 @@
   color: var(--laranja);
 }
 
+.suave {
+  background-color: var(--superficie);
+  border-color: var(--borda);
+  color: var(--texto-primario);
+}
+
 .texto {
   background: none;
   border-color: transparent;

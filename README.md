@@ -27,7 +27,7 @@ src/
 │   ├── base/            # Botao, Chip, Badge, Campo, Avatar
 │   ├── estado/          # Carregando, Esqueleto, ErroAoCarregar, EstadoVazio
 │   ├── anuncio/         # CardProcurando, CardVendendo, CardCompacto
-│   ├── feed/            # Hero, BarraDeFiltros, ChipsCategoria, Carrossel…
+│   ├── feed/            # Hero, BarraDeFiltros, ResumoDaLista, Carrossel…
 │   ├── layout/          # Cabecalho, Rodape, BotaoFlutuante, layouts, RotaPrivada
 │   └── icones.tsx       # conjunto de ícones SVG
 ├── dados/demo.ts        # dados de demonstração (única fonte de mock)

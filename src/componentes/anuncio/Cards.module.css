@@ -176,11 +176,19 @@
   text-transform: uppercase;
 }
 
-/* Ações ficam acima da área clicável do card. */
+/* Ações ficam acima da área clicável do card e assumem o laranja junto
+   com a borda quando o card inteiro é apontado. */
 .acao {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
+}
+
+.card:hover .acao,
+.card:focus-within .acao {
+  background: var(--laranja);
+  border-color: var(--laranja);
+  color: var(--texto-invertido);
 }
 
 /* ── Card de produto à venda ────────────────── */
@@ -261,6 +269,7 @@
 }
 
 .linhaPreco {
+  margin-top: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;

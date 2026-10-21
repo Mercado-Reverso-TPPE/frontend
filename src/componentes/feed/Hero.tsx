@@ -1,4 +1,4 @@
-import { fmtNumero } from "@/utils/formato";
+import { fmtMetrica } from "@/utils/formato";
 import estilos from "./Feed.module.css";
 
 /**
@@ -35,7 +35,7 @@ export function Hero({ metricas }: { metricas: MetricaDoHero[] }) {
                 {metrica.icone}
               </div>
               <dd className={estilos.metricaValor} style={{ margin: 0 }}>
-                {fmtNumero(metrica.valor)}
+                {fmtMetrica(metrica.valor)}
               </dd>
               <dt className={estilos.metricaRotulo}>{metrica.rotulo}</dt>
             </div>

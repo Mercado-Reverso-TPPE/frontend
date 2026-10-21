@@ -4,4 +4,5 @@ export { ChipsCategoria } from "./ChipsCategoria";
 export { FaixaDeConversao } from "./FaixaDeConversao";
 export { GradeDeAnuncios } from "./GradeDeAnuncios";
 export { Hero } from "./Hero";
+export { ResumoDaLista } from "./ResumoDaLista";
 export type { MetricaDoHero } from "./Hero";

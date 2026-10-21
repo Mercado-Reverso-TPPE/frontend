@@ -23,7 +23,6 @@ export function Badge({ children, tom = "neutro", icone, cor }: BadgeProps) {
   const estiloDaCategoria = cor
     ? {
         backgroundColor: `color-mix(in srgb, ${cor} 10%, transparent)`,
-        borderColor: `color-mix(in srgb, ${cor} 25%, transparent)`,
         color: cor,
       }
     : undefined;

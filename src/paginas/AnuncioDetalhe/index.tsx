@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router";
 import { ALL_ADS, MY_ADS, MOCK_OFFERS } from "@/dados/demo";
 import { T, catColor, comAlfa } from "@/estilos/tokens";
-import { fmtPrice, fmtRange } from "@/utils/formato";
+import { fmtDistancia, fmtPrice, fmtRange } from "@/utils/formato";
 import { IStar, IPin, ITag, IMessageCircle, IArrowLeft, IEye, IClock } from "@/componentes/icones";
 
 function Avatar({ initials, color, size = 40 }: { initials: string; color: string; size?: number }) {
@@ -83,7 +83,7 @@ export default function AnuncioDetalhe() {
             {/* Meta */}
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
               {[
-                { icon: <IPin size={13} />, text: `${ad.location} · ${ad.distance} km` },
+                { icon: <IPin size={13} />, text: `${ad.location} · ${fmtDistancia(ad.distance)}` },
                 { icon: <IClock size={13} />, text: `Publicado ${ad.timeAgo}` },
                 isBuyerAd
                   ? { icon: <span style={{ fontSize: 13 }}>📍</span>, text: `Raio de busca: ${ad.radius} km` }

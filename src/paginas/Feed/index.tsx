@@ -1,5 +1,11 @@
-import { Carrossel, FaixaDeConversao, GradeDeAnuncios, Hero } from "@/componentes/feed";
-import { BarraDeFiltros } from "@/componentes/feed";
+import {
+  BarraDeFiltros,
+  Carrossel,
+  FaixaDeConversao,
+  GradeDeAnuncios,
+  Hero,
+  ResumoDaLista,
+} from "@/componentes/feed";
 import { ErroAoCarregar, EsqueletoDeAnuncios, EstadoVazio } from "@/componentes/estado";
 import { useAnuncios } from "@/hooks/useAnuncios";
 import { useFiltros } from "@/hooks/useFiltros";
@@ -32,7 +38,8 @@ const CIDADE_DE_REFERENCIA = "São Paulo, SP";
 const INTERESSES = ["Eletrônicos", "Informática", "Games"];
 
 export default function Feed() {
-  const { filtros, definirTipo, definirCategoria, definirOrdenacao, limpar, temFiltroAtivo } = useFiltros();
+  const { filtros, definirTipo, definirCategoria, definirOrdenacao, limpar, temFiltroAtivo } =
+    useFiltros();
   const { data, isPending, isError, error, refetch } = useAnuncios(filtros);
 
   const anuncios = data?.itens ?? [];
@@ -46,11 +53,9 @@ export default function Feed() {
       <BarraDeFiltros
         tipo={filtros.tipo}
         categoria={filtros.categoria}
-        ordenacao={filtros.ordenacao}
         resultados={isPending ? undefined : data?.total}
         aoMudarTipo={definirTipo}
         aoMudarCategoria={definirCategoria}
-        aoMudarOrdenacao={definirOrdenacao}
       />
 
       <div className="conteudo" style={{ paddingBlock: "var(--espaco-3) var(--espaco-5)" }}>
@@ -79,7 +84,14 @@ export default function Feed() {
 
         {!isPending && !isError && anuncios.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-4)" }}>
-            <GradeDeAnuncios anuncios={primeiroBloco} />
+            <div>
+              <ResumoDaLista
+                total={data.total}
+                ordenacao={filtros.ordenacao}
+                aoMudarOrdenacao={definirOrdenacao}
+              />
+              <GradeDeAnuncios anuncios={primeiroBloco} />
+            </div>
 
             <Carrossel
               titulo="Recomendados para você"

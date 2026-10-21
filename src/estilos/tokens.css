@@ -11,6 +11,7 @@
   --laranja-hover: #C25F27;
   --laranja-claro: #FBF1EA;
   --laranja-borda: #F5D5C0;
+  --fundo-autenticacao: #FDF6F1;
 
   /* ── Cores funcionais ──────────────────────────────────── */
   --sucesso: #34C759;
@@ -145,6 +146,7 @@
 
   --laranja-claro: #2A1B12;
   --laranja-borda: #4A2E1C;
+  --fundo-autenticacao: #141010;
   --sucesso-superficie: #122017;
   --sucesso-borda: #1F3A28;
   --sucesso-texto: #5FD47E;
