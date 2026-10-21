@@ -1,11 +1,17 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router";
-import { router } from "./routes";
-import { AuthProvider } from "./shared/AuthContext";
+import { criarClienteDeConsulta } from "@/api/consulta";
+import { ProvedorDeSessao } from "@/hooks/useSessao";
+import { roteador } from "@/rotas";
+
+const clienteDeConsulta = criarClienteDeConsulta();
 
 export default function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <QueryClientProvider client={clienteDeConsulta}>
+      <ProvedorDeSessao>
+        <RouterProvider router={roteador} />
+      </ProvedorDeSessao>
+    </QueryClientProvider>
   );
 }

@@ -1,5 +1,7 @@
 {
-  "description": "Connect buyers posting purchase requests with sellers offering used goods, enabling seamless negotiation and trusted transactions in a user-friendly marketplace.",
+  "title": "Quero. — plataforma de compras reversa",
+  "description": "Você anuncia o que quer. Os vendedores te encontram. Plataforma de compras reversa para usados e seminovos.",
+  "language": "pt-BR",
   "robots": {
     "index": false
   },

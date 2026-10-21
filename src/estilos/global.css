@@ -1,0 +1,142 @@
+/* ──────────────────────────────────────────────────────────────
+   Quero. — estilos globais
+   Apenas reset, tipografia base, foco visível e utilitários.
+   Todo valor vem de tokens.css.
+   ────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: var(--largura-minima);
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-corpo);
+  line-height: var(--altura-linha-corpo);
+  background-color: var(--fundo);
+  color: var(--texto-primario);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--fonte-titulo);
+  line-height: var(--altura-linha-titulo);
+  letter-spacing: -0.3px;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--fonte-mono);
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ── Foco visível ────────────────────────────────────────────
+   Padrão único para todo elemento interativo. Nunca remover:
+   a identidade visual exige foco visível em toda a interface. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--foco-largura) solid var(--foco-cor);
+  outline-offset: var(--foco-deslocamento);
+  border-radius: var(--raio-botao);
+}
+
+/* Mouse não arrasta o anel de foco junto. */
+:where(a, button):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Barra de rolagem ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--borda);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--texto-terciario);
+}
+
+/* ── Utilitários ────────────────────────────────────────────── */
+
+/* Carrosséis e trilhas de chips roláveis. */
+.sem-barra-de-rolagem {
+  scrollbar-width: none;
+}
+
+.sem-barra-de-rolagem::-webkit-scrollbar {
+  display: none;
+}
+
+/* Texto só para leitor de tela — rótulo que carrega o significado
+   quando o sinal visual é cor ou ícone. */
+.apenas-leitor-de-tela {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Atalho de teclado para o conteúdo principal. */
+.link-pular {
+  position: absolute;
+  left: var(--espaco-2);
+  top: -64px;
+  z-index: var(--z-flutuante);
+  padding: var(--espaco-1) var(--espaco-2);
+  background-color: var(--laranja);
+  color: var(--texto-invertido);
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-semibold);
+  border-radius: var(--raio-botao);
+  text-decoration: none;
+  transition: top var(--transicao);
+}
+
+.link-pular:focus {
+  top: var(--espaco-1);
+}
+
+/* Truncagem de duas linhas — títulos e descrições de card. */
+.truncar-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Faixa central de conteúdo: 1280px com respiro lateral. */
+.conteudo {
+  width: 100%;
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding-inline: var(--respiro-lateral);
+}

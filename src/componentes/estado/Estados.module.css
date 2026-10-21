@@ -1,0 +1,120 @@
+/* Padrões de carregamento, erro e vazio. Toda listagem da SPA usa estes
+   três estados — nenhuma tela improvisa o seu. */
+
+.caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-5) var(--espaco-3);
+  text-align: center;
+}
+
+.icone {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-h2);
+  font-weight: var(--peso-semibold);
+  color: var(--texto-primario);
+}
+
+.descricao {
+  max-width: 44ch;
+  margin: 0;
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-secundario);
+  line-height: var(--altura-linha-corpo);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+  justify-content: center;
+  margin-top: var(--espaco-0-5);
+}
+
+/* ── Carregando ─────────────────────────────── */
+.girando {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--borda);
+  border-top-color: var(--laranja);
+  border-radius: 50%;
+  animation: girar 700ms linear infinite;
+}
+
+.emLinha {
+  flex-direction: row;
+  gap: var(--espaco-1);
+  padding: var(--espaco-2);
+}
+
+.rotuloDeCarregamento {
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-secundario);
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Esqueleto ──────────────────────────────── */
+.esqueleto {
+  background: linear-gradient(90deg, var(--superficie) 25%, var(--superficie-suave) 37%, var(--superficie) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--raio-botao);
+  animation: brilhar 1400ms ease infinite;
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--largura-card-minima), 1fr));
+  gap: var(--espaco-cards);
+}
+
+.cardEsqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-2);
+  border: 1.5px solid var(--borda);
+  border-radius: 14px;
+  background-color: var(--fundo-elevado);
+}
+
+@keyframes brilhar {
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto,
+  .girando {
+    animation-duration: 3s;
+  }
+}
+
+/* ── Erro ───────────────────────────────────── */
+.erro {
+  border: 1.5px solid color-mix(in srgb, var(--erro) 30%, transparent);
+  background-color: var(--erro-superficie);
+  border-radius: var(--raio-card);
+}
+
+.detalhe {
+  font-family: var(--fonte-mono);
+  font-size: var(--tamanho-micro);
+  color: var(--texto-terciario);
+}

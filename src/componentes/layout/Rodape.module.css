@@ -1,0 +1,41 @@
+.rodape {
+  flex-shrink: 0;
+  padding-block: var(--espaco-3);
+  background-color: var(--superficie);
+  border-top: 1px solid var(--borda);
+}
+
+.faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  max-width: var(--largura-conteudo);
+  margin: 0 auto;
+  padding-inline: var(--respiro-lateral);
+}
+
+.assinatura {
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+}
+
+.link {
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--laranja);
+  text-decoration: underline;
+}
