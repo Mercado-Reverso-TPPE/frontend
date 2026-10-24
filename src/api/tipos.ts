@@ -18,6 +18,9 @@ export interface User {
   phone: string;
   role: "buyer" | "seller" | "both";
   joinedAt: string;
+  /** Presentes no perfil da própria pessoa, vindos de `GET /perfil`. */
+  email?: string;
+  photo?: string;
 }
 
 export interface BuyerAd {

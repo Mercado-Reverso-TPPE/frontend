@@ -20,6 +20,7 @@ import Notificacoes from "@/paginas/Notificacoes";
 import OfertarProduto from "@/paginas/OfertarProduto";
 import OfertasRecebidas from "@/paginas/OfertasRecebidas";
 import Perfil from "@/paginas/Perfil";
+import RedefinirSenha from "@/paginas/RedefinirSenha";
 
 /**
  * Mapa de rotas da SPA — os caminhos são os documentados em
@@ -63,6 +64,7 @@ export const rotas: RouteObject[] = [
     children: [
       { path: "entrar", Component: Entrar },
       { path: "cadastrar", Component: Cadastrar },
+      { path: "redefinir-senha", Component: RedefinirSenha },
     ],
   },
 ];

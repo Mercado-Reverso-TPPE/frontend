@@ -10,7 +10,9 @@ A referência de arquitetura, telas e identidade visual é a documentação do g
 
 A fundação da SPA está montada: estrutura de pastas da arquitetura documentada, rotas com os caminhos canônicos, layout compartilhado, tokens visuais centralizados, componentes-base, cliente HTTP, padrões de carregamento, erro e vazio, e testes de componente e de fluxo de tela.
 
-As telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
+Autenticação integrada à API (QRO-01, QRO-02): cadastro, entrar, sair, recuperação e redefinição de senha, proteção de rotas com retorno ao destino e renovação automática do token.
+
+As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
 
@@ -21,9 +23,11 @@ src/
 ├── api/                 # cliente HTTP, recursos e tipos do contrato
 │   ├── cliente.ts       # fetch com base de URL, tempo limite e ErroDeApi
 │   ├── anuncios.ts      # recurso do feed (com fallback de demonstração)
+│   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
+│   ├── autenticacao/    # cabeçalho e avisos das telas de conta
 │   ├── base/            # Botao, Chip, Badge, Campo, Avatar
 │   ├── estado/          # Carregando, Esqueleto, ErroAoCarregar, EstadoVazio
 │   ├── anuncio/         # CardProcurando, CardVendendo, CardCompacto
@@ -38,7 +42,7 @@ src/
 ├── hooks/               # useSessao, useFiltros, useAnuncios, useLocalizacao
 ├── paginas/             # uma pasta por rota
 ├── testes/              # setup, utilitários, testes de componente e de fluxo
-├── utils/formato.ts     # valores em reais, distâncias em KM, plurais
+├── utils/               # formato (reais, KM, plurais), navegação e validação
 ├── App.tsx              # provedores da aplicação
 └── rotas.tsx            # mapa de rotas
 ```
@@ -48,7 +52,8 @@ src/
 | Rota | Tela | Sessão |
 | :--- | :--- | :--- |
 | `/` | Feed com hero, filtros, cards e carrosséis | pública |
-| `/entrar` · `/cadastrar` | Autenticação e criação de conta | pública |
+| `/entrar` · `/cadastrar` | Autenticação, criação de conta e pedido de nova senha | pública |
+| `/redefinir-senha?uid=…&token=…` | Nova senha a partir do link enviado por e-mail | pública |
 | `/anuncios/:id` | Detalhe do anúncio | pública |
 | `/perfil` | Dados cadastrais e localização de referência | exige sessão |
 | `/anunciar` | Formulário de "procura-se" | exige sessão |
@@ -62,7 +67,16 @@ src/
 | `/notificacoes` | Central de notificações | exige sessão |
 | `/historico` | Negociações concluídas e canceladas | exige sessão |
 
-Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Rota inexistente cai na tela de "página não existe".
+Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Só destinos internos são aceitos em `retorno`; qualquer outro volta para o feed. Rota inexistente cai na tela de "página não existe".
+
+### Sessão
+
+- `POST /sessoes` devolve o par JWT. O token de acesso fica só em memória, no cliente HTTP; o de renovação fica no `sessionStorage`, para a sessão sobreviver a um recarregamento da aba.
+- Ao abrir o app com um token de renovação guardado, a sessão é restaurada antes de qualquer rota privada decidir para onde ir.
+- Um 401 com sessão aberta dispara uma única renovação (`POST /sessoes/renovar`) e repete a chamada; se a renovação falhar, a sessão é encerrada.
+- Sair chama `DELETE /sessoes` para invalidar o token de renovação e limpa o cache do TanStack Query.
+- A senha só existe no estado do formulário e no corpo da requisição: os formulários usam `method="post"`, a senha é apagada do campo depois de um erro e nada dela vai para a URL ou para o armazenamento do navegador.
+- Credencial errada e conta inexistente mostram a mesma mensagem, e o pedido de nova senha confirma o envio do mesmo jeito exista ou não a conta.
 
 ### Tokens visuais
 
@@ -128,8 +142,10 @@ Os testes vivem em `src/testes/`: `componentes/` cobre os componentes-base e os 
 
 | Variável | Efeito |
 | :--- | :--- |
-| `VITE_API_URL` | Base da API. Vazia, a SPA usa os dados de demonstração. |
+| `VITE_API_URL` | Base da API, com o prefixo de versão (ex.: `http://localhost:8000/api/v1`). Vazia, a SPA usa os dados de demonstração. |
 | `VITE_API_TIMEOUT` | Tempo limite de cada requisição, em ms (padrão 15000). |
+
+No backend, `CORS_ALLOWED_ORIGINS` precisa incluir a origem do frontend e `PASSWORD_RESET_URL` precisa apontar para `<origem do frontend>/redefinir-senha` — os padrões de lá usam `localhost:3000`.
 
 O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o navegador usa as fontes de fallback declaradas nos tokens.
 

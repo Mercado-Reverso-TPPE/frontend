@@ -1,48 +1,159 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { definirTokenDeAcesso } from "@/api/cliente";
-import { ME } from "@/dados/demo";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  abrirSessao,
+  encerrarSessao,
+  obterPerfil,
+  renovarTokens,
+  type Credenciais,
+  type Tokens,
+} from "@/api/autenticacao";
+import { definirRenovadorDeSessao, definirTokenDeAcesso } from "@/api/cliente";
 import type { User } from "@/api/tipos";
 
 /**
- * Sessão da pessoa autenticada.
+ * Sessão da pessoa autenticada (QRO-01, QRO-02).
  *
- * A autenticação real depende da API (QRO-02); até lá `entrar()` assume o
- * usuário de demonstração. O contrato deste hook é o que as telas usam, então
- * trocar a origem do usuário não muda nenhuma tela.
+ * O token de acesso vive só em memória. O token de renovação fica no
+ * `sessionStorage` para a sessão sobreviver a um recarregamento da aba; some
+ * quando a aba fecha. A senha nunca é guardada: passa direto do formulário
+ * para a requisição.
  */
 interface Sessao {
   usuario: User | null;
   autenticado: boolean;
-  /** Abre a sessão. Com o backend integrado, recebe usuário e token da API. */
-  entrar: (usuario?: User, token?: string) => void;
-  sair: () => void;
+  /** Restaurando a sessão ao abrir o app; rotas privadas esperam por isso. */
+  verificando: boolean;
+  entrar: (credenciais: Credenciais) => Promise<void>;
+  sair: () => Promise<void>;
+  /** Troca os dados exibidos depois de editar o perfil. */
+  atualizarUsuario: (usuario: User) => void;
 }
 
 const SessaoContext = createContext<Sessao | null>(null);
 
+export const CHAVE_RENOVACAO = "quero.sessao.renovacao";
+
+function lerRenovacao() {
+  try {
+    return sessionStorage.getItem(CHAVE_RENOVACAO);
+  } catch {
+    return null;
+  }
+}
+
+function gravarRenovacao(token: string | null) {
+  try {
+    if (token) sessionStorage.setItem(CHAVE_RENOVACAO, token);
+    else sessionStorage.removeItem(CHAVE_RENOVACAO);
+  } catch {
+    // Armazenamento bloqueado: a sessão dura só até recarregar a página.
+  }
+}
+
+function guardarTokens(tokens: Tokens | null) {
+  definirTokenDeAcesso(tokens?.acesso ?? null);
+  gravarRenovacao(tokens?.renovacao ?? null);
+}
+
 export function ProvedorDeSessao({
   children,
-  /** Sessão já aberta — usado pelos testes e, no futuro, pela hidratação. */
+  /** Sessão já aberta — usado pelos testes. Presente, não restaura do navegador. */
   usuarioInicial = null,
 }: {
   children: ReactNode;
   usuarioInicial?: User | null;
 }) {
+  const clienteDeConsulta = useQueryClient();
   const [usuario, setUsuario] = useState<User | null>(usuarioInicial);
+  const [verificando, setVerificando] = useState(
+    () => usuarioInicial === null && lerRenovacao() !== null,
+  );
+  const restaurou = useRef(false);
 
-  const entrar = useCallback((proximo: User = ME, token?: string) => {
-    definirTokenDeAcesso(token ?? null);
-    setUsuario(proximo);
-  }, []);
-
-  const sair = useCallback(() => {
-    definirTokenDeAcesso(null);
+  const limpar = useCallback(() => {
+    guardarTokens(null);
     setUsuario(null);
+    clienteDeConsulta.clear();
+  }, [clienteDeConsulta]);
+
+  // Token de acesso expirado no meio do uso: o cliente HTTP pede a renovação.
+  useEffect(() => {
+    definirRenovadorDeSessao(async () => {
+      const renovacao = lerRenovacao();
+      if (!renovacao) return false;
+      try {
+        guardarTokens(await renovarTokens(renovacao));
+        return true;
+      } catch {
+        limpar();
+        return false;
+      }
+    });
+    return () => definirRenovadorDeSessao(null);
+  }, [limpar]);
+
+  // Restaura a sessão de um recarregamento. O `ref` evita renovar duas vezes
+  // no StrictMode — o backend invalida o token de renovação depois do uso.
+  useEffect(() => {
+    if (restaurou.current || !verificando) return;
+    restaurou.current = true;
+    const renovacao = lerRenovacao();
+    if (!renovacao) {
+      setVerificando(false);
+      return;
+    }
+    renovarTokens(renovacao)
+      .then((tokens) => {
+        guardarTokens(tokens);
+        return obterPerfil();
+      })
+      .then(setUsuario)
+      .catch(() => guardarTokens(null))
+      .finally(() => setVerificando(false));
+  }, [verificando]);
+
+  const entrar = useCallback(async (credenciais: Credenciais) => {
+    const tokens = await abrirSessao(credenciais);
+    guardarTokens(tokens);
+    try {
+      setUsuario(await obterPerfil());
+    } catch (erro) {
+      guardarTokens(null);
+      throw erro;
+    }
   }, []);
+
+  const sair = useCallback(async () => {
+    const renovacao = lerRenovacao();
+    try {
+      if (renovacao) await encerrarSessao(renovacao);
+    } catch {
+      // Mesmo sem resposta do servidor, a sessão local é encerrada.
+    } finally {
+      limpar();
+    }
+  }, [limpar]);
 
   const valor = useMemo<Sessao>(
-    () => ({ usuario, autenticado: usuario !== null, entrar, sair }),
-    [usuario, entrar, sair],
+    () => ({
+      usuario,
+      autenticado: usuario !== null,
+      verificando,
+      entrar,
+      sair,
+      atualizarUsuario: setUsuario,
+    }),
+    [usuario, verificando, entrar, sair],
   );
 
   return <SessaoContext.Provider value={valor}>{children}</SessaoContext.Provider>;
