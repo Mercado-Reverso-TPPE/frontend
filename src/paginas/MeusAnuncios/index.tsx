@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router";
 import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
@@ -8,7 +8,7 @@ import {
   listarMeusAnuncios,
   type MeuAnuncio,
 } from "@/api/meusAnuncios";
-import { Badge, Botao } from "@/componentes/base";
+import { Badge, Botao, DialogoDeConfirmacao } from "@/componentes/base";
 import { IPlus } from "@/componentes/icones";
 import { Aviso, Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
 import { fmtData, fmtPlural, fmtPrice } from "@/utils/formato";
@@ -122,9 +122,11 @@ export default function MeusAnuncios() {
       )}
 
       {paraEncerrar && (
-        <ConfirmarEncerramento
-          anuncio={paraEncerrar}
-          encerrando={mudarStatus.isPending}
+        <DialogoDeConfirmacao
+          titulo={`Encerrar "${paraEncerrar.titulo}"?`}
+          descricao="O anúncio sai do feed e para de receber ofertas. Encerrado, ele não volta a ficar ativo nem pode ser editado."
+          rotuloDeConfirmar="Encerrar anúncio"
+          ocupado={mudarStatus.isPending}
           aoCancelar={() => setParaEncerrar(undefined)}
           aoConfirmar={() => mudarStatus.mutate({ anuncio: paraEncerrar, status: "encerrado" })}
         />
@@ -190,63 +192,5 @@ function ItemDoAnuncio({
         )}
       </div>
     </li>
-  );
-}
-
-function ConfirmarEncerramento({
-  anuncio,
-  encerrando,
-  aoCancelar,
-  aoConfirmar,
-}: {
-  anuncio: MeuAnuncio;
-  encerrando: boolean;
-  aoCancelar: () => void;
-  aoConfirmar: () => void;
-}) {
-  const dialogo = useRef<HTMLDivElement>(null);
-  const fechar = useRef(aoCancelar);
-  fechar.current = aoCancelar;
-
-  // Foco no diálogo ao abrir, de volta ao gatilho ao fechar; Esc cancela.
-  useEffect(() => {
-    const anterior = document.activeElement as HTMLElement | null;
-    dialogo.current?.focus();
-    const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key === "Escape") fechar.current();
-    };
-    document.addEventListener("keydown", aoTeclar);
-    return () => {
-      document.removeEventListener("keydown", aoTeclar);
-      anterior?.focus();
-    };
-  }, []);
-
-  return (
-    <div className={estilos.fundoDoDialogo} onClick={aoCancelar}>
-      <div
-        ref={dialogo}
-        tabIndex={-1}
-        className={estilos.dialogo}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titulo-encerrar"
-        onClick={(evento) => evento.stopPropagation()}
-      >
-        <h2 id="titulo-encerrar">Encerrar "{anuncio.titulo}"?</h2>
-        <p>
-          O anúncio sai do feed e para de receber ofertas. Encerrado, ele não volta a ficar ativo nem pode ser
-          editado.
-        </p>
-        <div className={estilos.botoesDoDialogo}>
-          <Botao variante="secundario" onClick={aoCancelar}>
-            Cancelar
-          </Botao>
-          <Botao variante="perigo" carregando={encerrando} onClick={aoConfirmar}>
-            Encerrar anúncio
-          </Botao>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -5,8 +5,14 @@
 export function lerValorEmReais(texto: string): number | null {
   const limpo = texto.replace(/R\$|\s/g, "");
   if (!limpo) return null;
-  // Com vírgula, o ponto é separador de milhar (padrão brasileiro).
-  const normalizado = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : limpo;
+  // Com vírgula, ou com pontos em grupos de três (`2.100`), o ponto é
+  // separador de milhar, no padrão brasileiro.
+  const soMilhar = /^\d{1,3}(\.\d{3})+$/.test(limpo);
+  const normalizado = limpo.includes(",")
+    ? limpo.replace(/\./g, "").replace(",", ".")
+    : soMilhar
+      ? limpo.replace(/\./g, "")
+      : limpo;
   if (!/^\d+(\.\d{1,2})?$/.test(normalizado)) return Number.NaN;
   return Number(normalizado);
 }

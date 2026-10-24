@@ -6,9 +6,10 @@
  * carregamento, erro e estado vazio desde já, sem fingir persistência.
  */
 
-import { api, apiConfigurada } from "./cliente";
-import type { AnyAd } from "./tipos";
-import { ALL_ADS } from "@/dados/demo";
+import { api, apiConfigurada, ErroDeApi } from "./cliente";
+import { anuncioDaApi, slug, type Anuncio, type AnuncioDaApi } from "./meusAnuncios";
+import type { AnyAd, BuyerAd } from "./tipos";
+import { ALL_ADS, MY_ADS } from "@/dados/demo";
 
 export type TipoDeAnuncio = "todos" | "procurando" | "vendendo";
 export type OrdenacaoDeAnuncio = "recentes" | "proximos" | "maior-valor";
@@ -77,4 +78,40 @@ export async function listarAnuncios(
   await new Promise((resolve) => setTimeout(resolve, ATRASO_DEMO_MS));
   const itens = filtrarEOrdenar(ALL_ADS, filtros);
   return { itens, total: itens.length };
+}
+
+const STATUS_DEMO = { active: "ativo", paused: "pausado", closed: "encerrado" } as const;
+
+/** Converte um anúncio de demonstração no formato da API. */
+function anuncioDeDemo(anuncio: BuyerAd): Anuncio {
+  return {
+    id: String(anuncio.id),
+    comprador: anuncio.buyer.id,
+    titulo: anuncio.title,
+    categoria: slug(anuncio.category),
+    categoriaNome: anuncio.category,
+    descricao: anuncio.description,
+    precoMin: anuncio.budget.min,
+    precoMax: anuncio.budget.max,
+    raioKm: anuncio.radius,
+    status: STATUS_DEMO[anuncio.status],
+    ofertasRecebidas: anuncio.offers,
+    cidade: anuncio.location.split(",")[0]?.trim() ?? "",
+    uf: anuncio.location.split(",")[1]?.trim() ?? "",
+    criadoEm: new Date().toISOString(),
+    distanciaKm: anuncio.distance,
+  };
+}
+
+/** Um anúncio de "procura-se" visível para quem está logado. */
+export async function obterAnuncio(id: string): Promise<Anuncio> {
+  if (!apiConfigurada()) {
+    await new Promise((resolve) => setTimeout(resolve, ATRASO_DEMO_MS));
+    const encontrado = [...ALL_ADS, ...MY_ADS].find(
+      (anuncio): anuncio is BuyerAd => anuncio.kind === "buyer" && String(anuncio.id) === id,
+    );
+    if (!encontrado) throw new ErroDeApi("Não encontramos este anúncio.", { status: 404, codigo: "http" });
+    return anuncioDeDemo(encontrado);
+  }
+  return anuncioDaApi(await api.get<AnuncioDaApi>(`/anuncios/${id}`));
 }

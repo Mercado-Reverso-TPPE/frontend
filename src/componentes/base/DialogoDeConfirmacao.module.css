@@ -1,0 +1,42 @@
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-flutuante);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco-3);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dialogo {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px;
+  border-radius: var(--raio-modal);
+  background-color: var(--fundo-elevado);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.dialogo h2 {
+  margin: 0 0 var(--espaco-1);
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  color: var(--texto-primario);
+}
+
+.dialogo p {
+  margin: 0 0 var(--espaco-3);
+  font-size: var(--tamanho-corpo);
+  line-height: 1.5;
+  color: var(--texto-secundario);
+}
+
+.botoes {
+  display: flex;
+  gap: var(--espaco-1-5);
+}
+
+.botoes > * {
+  flex: 1;
+}

@@ -16,6 +16,8 @@ Perfil integrado à API (QRO-03): dados pessoais, foto (por link), localização
 
 Anúncios de "procura-se" integrados à API (QRO-04, QRO-05): publicar, editar, pausar, reativar e encerrar, com raio em KM e prévia do alcance. As ações de cada anúncio dependem do status que a API devolve (`acoesPermitidas` em `api/meusAnuncios.ts`).
 
+Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquanto a oferta aguarda resposta, e acompanhar o status em "Minhas ofertas". A tela de oferta não pede nem mostra ofertas concorrentes.
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -30,6 +32,7 @@ src/
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
+│   ├── ofertas.ts       # ofertas do vendedor
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
@@ -67,7 +70,8 @@ src/
 | `/meus-anuncios` | Lista com status e contagem de ofertas | exige sessão |
 | `/meus-anuncios/:id/editar` | Edição de um anúncio ativo ou pausado | exige sessão |
 | `/minha-loja` | Catálogo de produtos do vendedor | exige sessão |
-| `/anuncios/:id/ofertar` | Envio de oferta | exige sessão |
+| `/anuncios/:id/ofertar` | Envio, edição e retirada da própria oferta | exige sessão |
+| `/minhas-ofertas` | Ofertas enviadas e o status de cada uma | exige sessão |
 | `/anuncios/:id/ofertas` | Ofertas recebidas e comparação | exige sessão |
 | `/anuncios/:id/ofertas/:ofertaId/contraproposta` | Contraproposta | exige sessão |
 | `/negociacoes/:id` | Chat da negociação | exige sessão |
@@ -167,4 +171,6 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
 - A prévia do alcance em `/anunciar` é um desenho proporcional, não um mapa. O mapa entra com Leaflet quando um fluxo precisar de geografia real.
 - "Ver ofertas" leva a `/anuncios/:id/ofertas`, que ainda usa dados de demonstração até a issue de ofertas recebidas.
+- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend); a escolha do produto na oferta vem com a issue do catálogo.
+- `GET /ofertas/meus` não traz o título do anúncio, então "Minhas ofertas" mostra o produto ou a descrição e um link para o anúncio.
 - Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

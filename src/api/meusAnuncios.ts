@@ -8,7 +8,7 @@
  */
 
 import { api, apiConfigurada, ErroDeApi } from "./cliente";
-import { CATEGORIES, MY_ADS } from "@/dados/demo";
+import { CATEGORIES, ME, MY_ADS } from "@/dados/demo";
 
 export type StatusDoAnuncio = "ativo" | "pausado" | "em_negociacao" | "encerrado";
 
@@ -17,8 +17,11 @@ export interface Categoria {
   nome: string;
 }
 
-export interface MeuAnuncio {
+/** Anúncio de "procura-se" como a API devolve, já convertido. */
+export interface Anuncio {
   id: string;
+  /** Id de quem publicou. */
+  comprador: string;
   titulo: string;
   categoria: string;
   categoriaNome: string;
@@ -31,7 +34,12 @@ export interface MeuAnuncio {
   cidade: string;
   uf: string;
   criadoEm: string;
+  /** Distância até a pessoa que vê; só nas buscas. */
+  distanciaKm: number | null;
 }
+
+/** Na lista "Meus anúncios" o anúncio é o mesmo; o nome deixa claro de quem é. */
+export type MeuAnuncio = Anuncio;
 
 export interface DadosDoAnuncio {
   titulo: string;
@@ -66,8 +74,9 @@ export function acoesPermitidas(status: StatusDoAnuncio): AcaoDoAnuncio[] {
 }
 
 /** Corpo que o backend devolve para um anúncio. */
-interface AnuncioDaApi {
+export interface AnuncioDaApi {
   id: string;
+  comprador: string | number;
   titulo: string;
   categoria: string;
   categoria_nome: string;
@@ -80,13 +89,15 @@ interface AnuncioDaApi {
   cidade: string;
   uf: string;
   criado_em: string;
+  distancia_km?: number | null;
 }
 
 const numeroOuNulo = (valor: string | number | null) => (valor === null || valor === "" ? null : Number(valor));
 
-export function anuncioDaApi(anuncio: AnuncioDaApi): MeuAnuncio {
+export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
   return {
     id: anuncio.id,
+    comprador: String(anuncio.comprador),
     titulo: anuncio.titulo,
     categoria: anuncio.categoria,
     categoriaNome: anuncio.categoria_nome,
@@ -99,6 +110,7 @@ export function anuncioDaApi(anuncio: AnuncioDaApi): MeuAnuncio {
     cidade: anuncio.cidade ?? "",
     uf: anuncio.uf ?? "",
     criadoEm: anuncio.criado_em,
+    distanciaKm: anuncio.distancia_km ?? null,
   };
 }
 
@@ -125,7 +137,7 @@ function cursorDe(proxima: string | null) {
 
 // ── Demonstração ────────────────────────────────────────────────────────────
 
-const slug = (nome: string) =>
+export const slug = (nome: string) =>
   nome
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -145,6 +157,8 @@ let anunciosDemo: MeuAnuncio[] | null = null;
 function demo() {
   anunciosDemo ??= MY_ADS.map((anuncio, indice) => ({
     id: `demo-${anuncio.id}`,
+    comprador: ME.id,
+    distanciaKm: null,
     titulo: anuncio.title,
     categoria: slug(anuncio.category),
     categoriaNome: anuncio.category,
@@ -207,6 +221,8 @@ export async function publicarAnuncio(dados: DadosDoAnuncio, local: { cidade: st
     const novo: MeuAnuncio = {
       ...dados,
       id: `demo-${Date.now()}`,
+      comprador: ME.id,
+      distanciaKm: null,
       categoriaNome: CATEGORIAS_DEMO.find((categoria) => categoria.slug === dados.categoria)?.nome ?? dados.categoria,
       status: "ativo",
       ofertasRecebidas: 0,

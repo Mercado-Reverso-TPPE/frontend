@@ -13,6 +13,7 @@ const OPCOES_DO_MENU = [
   { icone: <IUser size={14} />, rotulo: "Meu perfil", para: "/perfil" },
   { icone: <IPackage size={14} />, rotulo: "Meus anúncios", para: "/meus-anuncios" },
   { icone: <IPlus size={14} />, rotulo: "Minha loja", para: "/minha-loja" },
+  { icone: <IPackage size={14} />, rotulo: "Minhas ofertas", para: "/minhas-ofertas" },
   { icone: <IHistory size={14} />, rotulo: "Histórico", para: "/historico" },
 ];
 

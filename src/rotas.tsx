@@ -16,6 +16,7 @@ import Feed from "@/paginas/Feed";
 import Historico from "@/paginas/Historico";
 import MeusAnuncios from "@/paginas/MeusAnuncios";
 import MinhaLoja from "@/paginas/MinhaLoja";
+import MinhasOfertas from "@/paginas/MinhasOfertas";
 import NaoEncontrada from "@/paginas/NaoEncontrada";
 import Negociacao from "@/paginas/Negociacao";
 import Notificacoes from "@/paginas/Notificacoes";
@@ -47,6 +48,7 @@ export const rotas: RouteObject[] = [
           { path: "meus-anuncios", Component: MeusAnuncios },
           { path: "meus-anuncios/:id/editar", Component: EditarAnuncio },
           { path: "minha-loja", Component: MinhaLoja },
+          { path: "minhas-ofertas", Component: MinhasOfertas },
           { path: "anuncios/:id/ofertar", Component: OfertarProduto },
           { path: "anuncios/:id/ofertas", Component: OfertasRecebidas },
           { path: "anuncios/:id/ofertas/:ofertaId/contraproposta", Component: Contraproposta },
