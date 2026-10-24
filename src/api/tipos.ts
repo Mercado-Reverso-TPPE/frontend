@@ -21,6 +21,7 @@ export interface User {
   /** Presentes no perfil da própria pessoa, vindos de `GET /perfil`. */
   email?: string;
   photo?: string;
+  cep?: string;
 }
 
 export interface BuyerAd {

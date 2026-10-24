@@ -5,6 +5,6 @@
 export function destinoSeguro(valor: string | null | undefined, padrao = "/") {
   if (!valor || !valor.startsWith("/") || valor.startsWith("//") || valor.includes("\\")) return padrao;
   // Não faz sentido voltar para as próprias telas de autenticação.
-  if (/^\/(entrar|cadastrar|redefinir-senha)(\/|\?|$)/.test(valor)) return padrao;
+  if (/^\/(entrar|cadastrar|redefinir-senha|confirmar-email)(\/|\?|$)/.test(valor)) return padrao;
   return valor;
 }

@@ -75,6 +75,7 @@ export function usuarioDoPerfil(perfil: PerfilDaApi): User {
     joinedAt: "",
     email: perfil.email,
     photo: perfil.foto || undefined,
+    cep: perfil.localizacao?.cep ?? "",
   };
 }
 

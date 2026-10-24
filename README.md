@@ -12,6 +12,8 @@ A fundação da SPA está montada: estrutura de pastas da arquitetura documentad
 
 Autenticação integrada à API (QRO-01, QRO-02): cadastro, entrar, sair, recuperação e redefinição de senha, proteção de rotas com retorno ao destino e renovação automática do token.
 
+Perfil integrado à API (QRO-03): dados pessoais, foto (por link), localização de referência geocodificada pelo backend e troca de e-mail com confirmação. O que muda no perfil aparece na hora no avatar e no menu da conta.
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -24,6 +26,7 @@ src/
 │   ├── cliente.ts       # fetch com base de URL, tempo limite e ErroDeApi
 │   ├── anuncios.ts      # recurso do feed (com fallback de demonstração)
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
+│   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
@@ -54,6 +57,7 @@ src/
 | `/` | Feed com hero, filtros, cards e carrosséis | pública |
 | `/entrar` · `/cadastrar` | Autenticação, criação de conta e pedido de nova senha | pública |
 | `/redefinir-senha?uid=…&token=…` | Nova senha a partir do link enviado por e-mail | pública |
+| `/confirmar-email?token=…` | Confirma a troca de e-mail a partir do link enviado | pública |
 | `/anuncios/:id` | Detalhe do anúncio | pública |
 | `/perfil` | Dados cadastrais e localização de referência | exige sessão |
 | `/anunciar` | Formulário de "procura-se" | exige sessão |
@@ -145,7 +149,7 @@ Os testes vivem em `src/testes/`: `componentes/` cobre os componentes-base e os 
 | `VITE_API_URL` | Base da API, com o prefixo de versão (ex.: `http://localhost:8000/api/v1`). Vazia, a SPA usa os dados de demonstração. |
 | `VITE_API_TIMEOUT` | Tempo limite de cada requisição, em ms (padrão 15000). |
 
-No backend, `CORS_ALLOWED_ORIGINS` precisa incluir a origem do frontend e `PASSWORD_RESET_URL` precisa apontar para `<origem do frontend>/redefinir-senha` — os padrões de lá usam `localhost:3000`.
+No backend, `CORS_ALLOWED_ORIGINS` precisa incluir a origem do frontend `PASSWORD_RESET_URL` precisa apontar para `<origem do frontend>/redefinir-senha` e `EMAIL_CHANGE_URL` para `<origem do frontend>/confirmar-email` — os padrões de lá usam `localhost:3000`.
 
 O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o navegador usa as fontes de fallback declaradas nos tokens.
 
@@ -155,4 +159,6 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - Substituir os dados de demonstração por chamadas reais quando o contrato da API for publicado, começando pelo feed.
 - Paginação incremental do feed, recomendações e proximidade dependem de endpoints ainda não definidos.
 - Formulários com React Hook Form + Zod e mapa com Leaflet entram junto com os fluxos que os exigem.
+- O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
+- A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
 - Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

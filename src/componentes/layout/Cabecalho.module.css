@@ -194,3 +194,18 @@
     display: none;
   }
 }
+
+.identidade {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--espaco-1) var(--espaco-1-5);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-secundario);
+}
+
+.identidade strong {
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-primario);
+}

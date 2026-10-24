@@ -8,6 +8,7 @@ import AnuncioDetalhe from "@/paginas/AnuncioDetalhe";
 import Avaliar from "@/paginas/Avaliar";
 import Cadastrar from "@/paginas/Cadastrar";
 import ConcluirVenda from "@/paginas/ConcluirVenda";
+import ConfirmarEmail from "@/paginas/ConfirmarEmail";
 import Contraproposta from "@/paginas/Contraproposta";
 import Entrar from "@/paginas/Entrar";
 import Feed from "@/paginas/Feed";
@@ -65,6 +66,7 @@ export const rotas: RouteObject[] = [
       { path: "entrar", Component: Entrar },
       { path: "cadastrar", Component: Cadastrar },
       { path: "redefinir-senha", Component: RedefinirSenha },
+      { path: "confirmar-email", Component: ConfirmarEmail },
     ],
   },
 ];

@@ -9,3 +9,8 @@
   color: var(--texto-invertido);
   user-select: none;
 }
+
+.foto {
+  object-fit: cover;
+  background-color: var(--superficie-suave);
+}

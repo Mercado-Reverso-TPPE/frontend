@@ -1,3 +1,4 @@
+import { useState } from "react";
 import estilos from "./Avatar.module.css";
 
 interface AvatarProps {
@@ -8,16 +9,34 @@ interface AvatarProps {
   tamanho?: number;
   /** Nome completo, usado como rótulo acessível. */
   nome?: string;
+  /** URL da foto. Se não carregar, volta para as iniciais. */
+  foto?: string;
 }
 
-/** Avatar de iniciais usado em cards, cabeçalho e listas de oferta. */
-export function Avatar({ iniciais, cor, tamanho = 32, nome }: AvatarProps) {
+/** Avatar usado em cards, cabeçalho e listas de oferta: foto ou iniciais. */
+export function Avatar({ iniciais, cor, tamanho = 32, nome, foto }: AvatarProps) {
+  const [fotoComErro, setFotoComErro] = useState<string>();
+  const rotulo = nome ? `Foto de ${nome}` : `Iniciais ${iniciais}`;
+  const dimensoes = { width: tamanho, height: tamanho };
+
+  if (foto && foto !== fotoComErro) {
+    return (
+      <img
+        className={`${estilos.avatar} ${estilos.foto}`}
+        style={dimensoes}
+        src={foto}
+        alt={rotulo}
+        onError={() => setFotoComErro(foto)}
+      />
+    );
+  }
+
   return (
     <span
       className={estilos.avatar}
-      style={{ width: tamanho, height: tamanho, backgroundColor: cor, fontSize: Math.round(tamanho * 0.34) }}
+      style={{ ...dimensoes, backgroundColor: cor, fontSize: Math.round(tamanho * 0.34) }}
       role="img"
-      aria-label={nome ? `Foto de ${nome}` : `Iniciais ${iniciais}`}
+      aria-label={rotulo}
     >
       {iniciais}
     </span>

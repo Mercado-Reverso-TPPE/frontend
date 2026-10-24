@@ -88,7 +88,13 @@ export function Cabecalho() {
               aria-expanded={menuAberto}
               aria-haspopup="menu"
             >
-              <Avatar iniciais={usuario.initials} cor={usuario.color} tamanho={28} nome={usuario.name} />
+              <Avatar
+                iniciais={usuario.initials}
+                cor={usuario.color}
+                tamanho={28}
+                nome={usuario.name}
+                foto={usuario.photo}
+              />
               {usuario.name.split(" ")[0]}
               <IChevronDown size={12} color={T.textMid} />
             </button>
@@ -97,6 +103,13 @@ export function Cabecalho() {
               <>
                 <div className={estilos.fundoDoMenu} onClick={() => setMenuAberto(false)} />
                 <div className={estilos.menu} role="menu">
+                  <div className={estilos.identidade}>
+                    <strong>{usuario.name}</strong>
+                    <span>
+                      {usuario.city ? `${usuario.city}${usuario.state ? `, ${usuario.state}` : ""}` : "Localização não informada"}
+                    </span>
+                  </div>
+                  <div className={estilos.separador} />
                   {OPCOES_DO_MENU.map((opcao) => (
                     <Link
                       key={opcao.para}
