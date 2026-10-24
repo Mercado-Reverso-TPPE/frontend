@@ -1,125 +1,252 @@
-import { useState } from "react";
-import { Link } from "react-router";
-import { MY_ADS, BuyerAd } from "@/dados/demo";
-import { T } from "@/estilos/tokens";
-import { fmtRange } from "@/utils/formato";
-import { IPlus, IEdit, ICheck } from "@/componentes/icones";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router";
+import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
+import {
+  acoesPermitidas,
+  alterarStatusDoAnuncio,
+  listarMeusAnuncios,
+  type MeuAnuncio,
+} from "@/api/meusAnuncios";
+import { Badge, Botao } from "@/componentes/base";
+import { IPlus } from "@/componentes/icones";
+import { Aviso, Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
+import { fmtData, fmtPlural, fmtPrice } from "@/utils/formato";
+import { ROTULO_DO_STATUS, TOM_DO_STATUS } from "./status";
+import estilos from "./MeusAnuncios.module.css";
 
-type Status = "active" | "paused" | "closed";
+type NovoStatus = "ativo" | "pausado" | "encerrado";
 
-const STATUS_META: Record<Status, { label: string; color: string; bg: string; border: string }> = {
-  active: { label: "Ativo", color: T.success, bg: T.successBg, border: T.successBorder },
-  paused: { label: "Pausado", color: "#FF9500", bg: "#FFF8EE", border: "#FFD8A0" },
-  closed: { label: "Encerrado", color: T.textLight, bg: T.bgMuted, border: T.border },
-};
+function faixaDePreco(anuncio: MeuAnuncio) {
+  const { precoMin, precoMax } = anuncio;
+  if (precoMin !== null && precoMax !== null) return `${fmtPrice(precoMin)} a ${fmtPrice(precoMax)}`;
+  if (precoMax !== null) return `Até ${fmtPrice(precoMax)}`;
+  if (precoMin !== null) return `A partir de ${fmtPrice(precoMin)}`;
+  return "Sem faixa de preço";
+}
 
+/** Lista "Meus anúncios" com status, ofertas e ações por estado (QRO-05). */
 export default function MeusAnuncios() {
-  const [ads, setAds] = useState<BuyerAd[]>(MY_ADS);
-  const [confirm, setConfirm] = useState<{ id: number; action: "close" } | null>(null);
+  const localizacao = useLocation();
+  const clienteDeConsulta = useQueryClient();
+  const avisoDeOrigem = (localizacao.state as { aviso?: string } | null)?.aviso;
+  const [aviso, setAviso] = useState<{ tom: "sucesso" | "erro"; texto: string } | undefined>(
+    avisoDeOrigem ? { tom: "sucesso", texto: avisoDeOrigem } : undefined,
+  );
+  const [paraEncerrar, setParaEncerrar] = useState<MeuAnuncio>();
 
-  const toggle = (id: number) => setAds(list => list.map(a => a.id === id ? { ...a, status: a.status === "active" ? "paused" : "active" } : a));
-  const close = (id: number) => { setAds(list => list.map(a => a.id === id ? { ...a, status: "closed" } : a)); setConfirm(null); };
+  const consulta = useInfiniteQuery({
+    queryKey: ["meus-anuncios", "lista"],
+    queryFn: ({ pageParam }) => listarMeusAnuncios(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (pagina) => pagina.proximo,
+  });
 
-  const active = ads.filter(a => a.status === "active").length;
+  const mudarStatus = useMutation({
+    mutationFn: ({ anuncio, status }: { anuncio: MeuAnuncio; status: NovoStatus }) =>
+      alterarStatusDoAnuncio(anuncio.id, status),
+    onSuccess: (atualizado, { status }) => {
+      const verbo = status === "pausado" ? "pausado" : status === "encerrado" ? "encerrado" : "reativado";
+      setAviso({ tom: "sucesso", texto: `"${atualizado.titulo}" foi ${verbo}.` });
+    },
+    onError: (erro) => {
+      // O estado pode ter mudado no servidor (ex.: entrou em negociação).
+      const { geral } = errosDeValidacao(erro);
+      setAviso({
+        tom: "erro",
+        texto: geral ?? (erro instanceof ErroDeApi ? erro.message : "Não foi possível mudar o status agora."),
+      });
+    },
+    onSettled: () => {
+      setParaEncerrar(undefined);
+      return clienteDeConsulta.invalidateQueries({ queryKey: ["meus-anuncios"] });
+    },
+  });
+
+  const anuncios = consulta.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const ativos = anuncios.filter((anuncio) => anuncio.status === "ativo").length;
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 28px 60px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+    <div className={estilos.pagina}>
+      <div className={estilos.topo}>
         <div>
-          <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 28, color: T.text, margin: "0 0 4px", letterSpacing: "-0.5px" }}>Meus anúncios</h1>
-          <span style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid }}>{active} ativo{active !== 1 ? "s" : ""} · {ads.length} no total</span>
+          <h1>Meus anúncios</h1>
+          {anuncios.length > 0 && (
+            <span className={estilos.resumo}>
+              {fmtPlural(ativos, "ativo")} · {anuncios.length} no total
+            </span>
+          )}
         </div>
-        <Link to="/anunciar" style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 20px", background: "linear-gradient(135deg,#E8803F,#D97338)", color: "#fff", border: "none", borderRadius: 10, fontFamily: T.font.display, fontWeight: 700, fontSize: 14, cursor: "pointer", textDecoration: "none" }}>
-          <IPlus size={15} color="#fff" />Novo anúncio
-        </Link>
+        <Botao para="/anunciar" icone={<IPlus size={15} />}>
+          Novo anúncio
+        </Botao>
       </div>
 
-      {ads.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 18, color: T.text, marginBottom: 8 }}>Nenhum anúncio ainda</div>
-          <Link to="/anunciar" style={{ display: "inline-block", padding: "11px 24px", backgroundColor: T.primary, color: "#fff", borderRadius: 10, textDecoration: "none", fontFamily: T.font.display, fontWeight: 700, fontSize: 14 }}>Criar primeiro anúncio</Link>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {ads.map(ad => {
-            const sm = STATUS_META[ad.status];
-            return (
-              <div key={ad.id} style={{ backgroundColor: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 14, padding: "20px 22px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                {/* Status dot */}
-                <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: sm.color, flexShrink: 0 }} />
+      {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
 
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 15, color: ad.status === "closed" ? T.textMid : T.text }}>{ad.title}</span>
-                    <span style={{ padding: "2px 9px", borderRadius: 10, backgroundColor: sm.bg, border: `1px solid ${sm.border}`, fontSize: 11, fontFamily: T.font.display, fontWeight: 600, color: sm.color }}>{sm.label}</span>
-                    {ad.urgent && ad.status === "active" && <span style={{ padding: "2px 8px", borderRadius: 10, backgroundColor: T.errorBg, fontSize: 11, fontFamily: T.font.display, fontWeight: 600, color: T.error }}>⚡ Urgente</span>}
-                  </div>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 14, color: "#1A7A38" }}>{fmtRange(ad.budget.min, ad.budget.max)}</span>
-                    <span style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid }}>
-                      <strong style={{ color: ad.offers > 0 ? T.primary : T.text }}>{ad.offers}</strong> oferta{ad.offers !== 1 ? "s" : ""}
-                    </span>
-                    <span style={{ fontFamily: T.font.body, fontSize: 12, color: T.textLight }}>{ad.publishedAt}</span>
-                  </div>
-                </div>
+      {consulta.isPending && <Carregando rotulo="Carregando seus anúncios…" />}
+      {consulta.isError && (
+        <ErroAoCarregar erro={consulta.error} aoTentarDeNovo={() => consulta.refetch()} />
+      )}
 
-                {/* Actions */}
-                <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                  {ad.status !== "closed" && (
-                    <>
-                      <Link to={`/anuncios/${ad.id}`} style={{ padding: "7px 14px", border: `1.5px solid ${T.border}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 600, fontSize: 12, color: T.text, textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                        <IEdit size={13} />Ver
-                      </Link>
+      {consulta.isSuccess && anuncios.length === 0 && (
+        <EstadoVazio
+          icone="📋"
+          titulo="Você ainda não publicou nada"
+          descricao="Conte o que você procura e quanto quer pagar. Vendedores perto de você mandam ofertas."
+          acao={{ rotulo: "Criar primeiro anúncio", para: "/anunciar" }}
+        />
+      )}
 
-                      {ad.offers > 0 && (
-                        <Link to="/anuncios/10/ofertas" style={{ padding: "7px 14px", border: `1.5px solid ${T.info}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 700, fontSize: 12, color: T.info, textDecoration: "none", backgroundColor: T.infoBg }}>
-                          {ad.offers} oferta{ad.offers !== 1 ? "s" : ""}
-                        </Link>
-                      )}
+      {anuncios.length > 0 && (
+        <ul className={estilos.lista}>
+          {anuncios.map((anuncio) => (
+            <ItemDoAnuncio
+              key={anuncio.id}
+              anuncio={anuncio}
+              ocupado={mudarStatus.isPending && mudarStatus.variables?.anuncio.id === anuncio.id}
+              aoMudarStatus={(status) =>
+                status === "encerrado" ? setParaEncerrar(anuncio) : mudarStatus.mutate({ anuncio, status })
+              }
+            />
+          ))}
+        </ul>
+      )}
 
-                      <button onClick={() => toggle(ad.id)} style={{ padding: "7px 14px", border: `1.5px solid ${T.border}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 600, fontSize: 12, color: T.textMid, backgroundColor: "#fff", cursor: "pointer" }}>
-                        {ad.status === "active" ? "Pausar" : "Reativar"}
-                      </button>
-
-                      <button onClick={() => setConfirm({ id: ad.id, action: "close" })} style={{ padding: "7px 14px", border: `1.5px solid ${T.errorBg}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 600, fontSize: 12, color: T.error, backgroundColor: T.errorBg, cursor: "pointer" }}>
-                        Encerrar
-                      </button>
-                    </>
-                  )}
-
-                  {ad.status === "closed" && (
-                    <span style={{ fontFamily: T.font.body, fontSize: 12, color: T.textLight, padding: "7px 0" }}>Encerrado em {ad.publishedAt}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      {consulta.hasNextPage && (
+        <div className={estilos.carregarMais}>
+          <Botao variante="secundario" carregando={consulta.isFetchingNextPage} onClick={() => consulta.fetchNextPage()}>
+            Carregar mais
+          </Botao>
         </div>
       )}
 
-      {/* Confirm close modal */}
-      {confirm && (
-        <>
-          <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-            onClick={() => setConfirm(null)}>
-            <div style={{ backgroundColor: "#fff", borderRadius: 16, padding: 28, maxWidth: 380, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-              <h3 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 18, color: T.text, margin: "0 0 8px" }}>Encerrar anúncio?</h3>
-              <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: "0 0 20px", lineHeight: 1.5 }}>
-                Esta ação encerrará o anúncio e notificará os vendedores que fizeram ofertas.
-              </p>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setConfirm(null)} style={{ flex: 1, padding: "11px", border: `1.5px solid ${T.border}`, borderRadius: 9, fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.text, backgroundColor: "#fff", cursor: "pointer" }}>Cancelar</button>
-                <button onClick={() => close(confirm.id)} style={{ flex: 1, padding: "11px", border: "none", borderRadius: 9, fontFamily: T.font.display, fontWeight: 700, fontSize: 14, color: "#fff", backgroundColor: T.error, cursor: "pointer" }}>
-                  <ICheck size={14} color="#fff" style={{ marginRight: 6 }} />Encerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
+      {paraEncerrar && (
+        <ConfirmarEncerramento
+          anuncio={paraEncerrar}
+          encerrando={mudarStatus.isPending}
+          aoCancelar={() => setParaEncerrar(undefined)}
+          aoConfirmar={() => mudarStatus.mutate({ anuncio: paraEncerrar, status: "encerrado" })}
+        />
       )}
+    </div>
+  );
+}
+
+function ItemDoAnuncio({
+  anuncio,
+  ocupado,
+  aoMudarStatus,
+}: {
+  anuncio: MeuAnuncio;
+  ocupado: boolean;
+  aoMudarStatus: (status: NovoStatus) => void;
+}) {
+  const acoes = acoesPermitidas(anuncio.status);
+
+  return (
+    <li className={`${estilos.item} ${anuncio.status === "encerrado" ? estilos.encerrado : ""}`}>
+      <div className={estilos.info}>
+        <div className={estilos.linhaTitulo}>
+          <h2>{anuncio.titulo}</h2>
+          <Badge tom={TOM_DO_STATUS[anuncio.status]}>{ROTULO_DO_STATUS[anuncio.status]}</Badge>
+        </div>
+        <p className={estilos.detalhes}>
+          <span className={estilos.preco}>{faixaDePreco(anuncio)}</span>
+          <span className={estilos.ofertas}>
+            <strong>{anuncio.ofertasRecebidas}</strong>{" "}
+            {anuncio.ofertasRecebidas === 1 ? "oferta recebida" : "ofertas recebidas"}
+          </span>
+          <span>Raio de {anuncio.raioKm} km</span>
+          <span>Publicado em {fmtData(anuncio.criadoEm)}</span>
+        </p>
+      </div>
+
+      <div className={estilos.acoes} aria-label={`Ações de ${anuncio.titulo}`} role="group">
+        {anuncio.ofertasRecebidas > 0 && (
+          <Botao para={`/anuncios/${anuncio.id}/ofertas`} variante="secundario" tamanho="pequeno">
+            Ver ofertas
+          </Botao>
+        )}
+        {acoes.includes("editar") && (
+          <Botao para={`/meus-anuncios/${anuncio.id}/editar`} variante="suave" tamanho="pequeno">
+            Editar
+          </Botao>
+        )}
+        {acoes.includes("pausar") && (
+          <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("pausado")}>
+            Pausar
+          </Botao>
+        )}
+        {acoes.includes("reativar") && (
+          <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("ativo")}>
+            Reativar
+          </Botao>
+        )}
+        {acoes.includes("encerrar") && (
+          <Botao variante="perigo" tamanho="pequeno" disabled={ocupado} onClick={() => aoMudarStatus("encerrado")}>
+            Encerrar
+          </Botao>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function ConfirmarEncerramento({
+  anuncio,
+  encerrando,
+  aoCancelar,
+  aoConfirmar,
+}: {
+  anuncio: MeuAnuncio;
+  encerrando: boolean;
+  aoCancelar: () => void;
+  aoConfirmar: () => void;
+}) {
+  const dialogo = useRef<HTMLDivElement>(null);
+  const fechar = useRef(aoCancelar);
+  fechar.current = aoCancelar;
+
+  // Foco no diálogo ao abrir, de volta ao gatilho ao fechar; Esc cancela.
+  useEffect(() => {
+    const anterior = document.activeElement as HTMLElement | null;
+    dialogo.current?.focus();
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") fechar.current();
+    };
+    document.addEventListener("keydown", aoTeclar);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      anterior?.focus();
+    };
+  }, []);
+
+  return (
+    <div className={estilos.fundoDoDialogo} onClick={aoCancelar}>
+      <div
+        ref={dialogo}
+        tabIndex={-1}
+        className={estilos.dialogo}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-encerrar"
+        onClick={(evento) => evento.stopPropagation()}
+      >
+        <h2 id="titulo-encerrar">Encerrar "{anuncio.titulo}"?</h2>
+        <p>
+          O anúncio sai do feed e para de receber ofertas. Encerrado, ele não volta a ficar ativo nem pode ser
+          editado.
+        </p>
+        <div className={estilos.botoesDoDialogo}>
+          <Botao variante="secundario" onClick={aoCancelar}>
+            Cancelar
+          </Botao>
+          <Botao variante="perigo" carregando={encerrando} onClick={aoConfirmar}>
+            Encerrar anúncio
+          </Botao>
+        </div>
+      </div>
     </div>
   );
 }

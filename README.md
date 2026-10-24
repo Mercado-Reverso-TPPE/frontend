@@ -14,6 +14,8 @@ Autenticação integrada à API (QRO-01, QRO-02): cadastro, entrar, sair, recupe
 
 Perfil integrado à API (QRO-03): dados pessoais, foto (por link), localização de referência geocodificada pelo backend e troca de e-mail com confirmação. O que muda no perfil aparece na hora no avatar e no menu da conta.
 
+Anúncios de "procura-se" integrados à API (QRO-04, QRO-05): publicar, editar, pausar, reativar e encerrar, com raio em KM e prévia do alcance. As ações de cada anúncio dependem do status que a API devolve (`acoesPermitidas` em `api/meusAnuncios.ts`).
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -27,6 +29,7 @@ src/
 │   ├── anuncios.ts      # recurso do feed (com fallback de demonstração)
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
+│   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
@@ -62,6 +65,7 @@ src/
 | `/perfil` | Dados cadastrais e localização de referência | exige sessão |
 | `/anunciar` | Formulário de "procura-se" | exige sessão |
 | `/meus-anuncios` | Lista com status e contagem de ofertas | exige sessão |
+| `/meus-anuncios/:id/editar` | Edição de um anúncio ativo ou pausado | exige sessão |
 | `/minha-loja` | Catálogo de produtos do vendedor | exige sessão |
 | `/anuncios/:id/ofertar` | Envio de oferta | exige sessão |
 | `/anuncios/:id/ofertas` | Ofertas recebidas e comparação | exige sessão |
@@ -161,4 +165,6 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - Formulários com React Hook Form + Zod e mapa com Leaflet entram junto com os fluxos que os exigem.
 - O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
 - A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
+- A prévia do alcance em `/anunciar` é um desenho proporcional, não um mapa. O mapa entra com Leaflet quando um fluxo precisar de geografia real.
+- "Ver ofertas" leva a `/anuncios/:id/ofertas`, que ainda usa dados de demonstração até a issue de ofertas recebidas.
 - Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

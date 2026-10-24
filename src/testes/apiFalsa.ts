@@ -10,6 +10,8 @@ export interface ChamadaRegistrada {
   caminho: string;
   corpo: unknown;
   autorizacao?: string;
+  /** Parâmetros da query string. */
+  parametros: Record<string, string>;
 }
 
 type Manipulador = (corpo: unknown, chamada: ChamadaRegistrada) => RespostaFalsa;
@@ -30,6 +32,7 @@ export function simularApi(rotas: Record<string, Manipulador>) {
       caminho: endereco.pathname.replace(/^\/api\/v1/, ""),
       corpo: init.body ? JSON.parse(String(init.body)) : undefined,
       autorizacao: cabecalhos.Authorization,
+      parametros: Object.fromEntries(endereco.searchParams),
     };
     chamadas.push(chamada);
 
