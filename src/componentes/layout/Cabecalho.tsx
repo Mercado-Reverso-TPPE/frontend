@@ -51,7 +51,7 @@ export function Cabecalho() {
             id="busca-global"
             className={estilos.campoDeBusca}
             type="search"
-            placeholder="Buscar por produto, categoria ou cidade..."
+            placeholder="Buscar pelo que as pessoas procuram…"
             value={termo}
             onChange={(evento) => setTermo(evento.target.value)}
           />

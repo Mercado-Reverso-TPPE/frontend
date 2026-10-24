@@ -342,3 +342,17 @@
   font-weight: var(--peso-bold);
   color: var(--laranja);
 }
+
+.filtrosExtras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 180px)) auto minmax(160px, 200px);
+  align-items: end;
+  gap: var(--espaco-1-5);
+  padding-top: var(--espaco-1-5);
+}
+
+@media (max-width: 760px) {
+  .filtrosExtras {
+    grid-template-columns: 1fr 1fr;
+  }
+}

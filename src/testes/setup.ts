@@ -8,6 +8,7 @@ import { reiniciarDemoDeOfertas } from "@/api/ofertas";
 // módulo do cliente; nenhum teste pode herdar a sessão nem a API falsa do anterior.
 afterEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
   definirTokenDeAcesso(null);
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
