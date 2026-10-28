@@ -1,64 +1,123 @@
-import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useState, type FormEvent } from "react";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
+import { solicitarRedefinicaoDeSenha } from "@/api/autenticacao";
+import { ErroDeApi } from "@/api/cliente";
+import { Aviso, CabecalhoDeAutenticacao, estilosDeAutenticacao as estilos } from "@/componentes/autenticacao";
+import { Botao, Campo } from "@/componentes/base";
 import { useSessao } from "@/hooks/useSessao";
-import { T } from "@/estilos/tokens";
+import { destinoSeguro } from "@/utils/navegacao";
+import { erroDeEmail } from "@/utils/validacao";
+
+/**
+ * Credencial errada e conta inexistente recebem a mesma mensagem: a tela não
+ * pode servir para descobrir quem tem cadastro (QRO-02).
+ */
+function mensagemDeFalhaAoEntrar(erro: unknown) {
+  if (erro instanceof ErroDeApi && (erro.status === 400 || erro.status === 401)) {
+    return "E-mail ou senha inválidos.";
+  }
+  if (erro instanceof ErroDeApi) return erro.message;
+  return "Não foi possível entrar agora. Tente de novo.";
+}
 
 export default function Entrar() {
-  const { entrar } = useSessao();
-  const navigate = useNavigate();
+  const { entrar, autenticado } = useSessao();
+  const navegar = useNavigate();
   const [parametros] = useSearchParams();
   // QRO-02: depois de entrar, a pessoa volta ao destino que pediu.
-  const retorno = parametros.get("retorno") ?? "/";
+  const retorno = destinoSeguro(parametros.get("retorno"));
+  const senhaRedefinida = parametros.get("senha") === "redefinida";
+
+  const [modo, setModo] = useState<"entrar" | "recuperar">("entrar");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [forgot, setForgot] = useState(false);
-  const [forgotSent, setForgotSent] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [errosDeCampo, setErrosDeCampo] = useState<{ email?: string; senha?: string }>({});
+  const [erroGeral, setErroGeral] = useState<string>();
+  const [enviando, setEnviando] = useState(false);
+  const [linkEnviado, setLinkEnviado] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => { entrar(); navigate(retorno, { replace: true }); }, 800);
+  if (autenticado && !enviando) return <Navigate to={retorno} replace />;
+
+  const linkCadastro = retorno === "/" ? "/cadastrar" : `/cadastrar?retorno=${encodeURIComponent(retorno)}`;
+
+  const aoEntrar = async (evento: FormEvent) => {
+    evento.preventDefault();
+    const erros = { email: erroDeEmail(email), senha: senha ? undefined : "Informe a senha." };
+    setErrosDeCampo(erros);
+    setErroGeral(undefined);
+    if (erros.email || erros.senha) return;
+
+    setEnviando(true);
+    try {
+      await entrar({ email, senha });
+      navegar(retorno, { replace: true });
+    } catch (erro) {
+      setErroGeral(mensagemDeFalhaAoEntrar(erro));
+      setSenha("");
+      setEnviando(false);
+    }
   };
 
-  const handleForgot = (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotSent(true);
+  const aoRecuperar = async (evento: FormEvent) => {
+    evento.preventDefault();
+    const erro = erroDeEmail(email);
+    setErrosDeCampo({ email: erro });
+    setErroGeral(undefined);
+    if (erro) return;
+
+    setEnviando(true);
+    try {
+      await solicitarRedefinicaoDeSenha(email);
+      setLinkEnviado(true);
+    } catch (falha) {
+      setErroGeral(falha instanceof ErroDeApi ? falha.message : "Não foi possível enviar o link agora.");
+    } finally {
+      setEnviando(false);
+    }
   };
 
-  const field = (label: string, value: string, onChange: (v: string) => void, type = "text", placeholder = "") => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 13, color: T.text }}>{label}</label>
-      <input
-        type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} required
-        style={{ padding: "11px 14px", border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 14, fontFamily: T.font.body, color: T.text, outline: "none", transition: "border-color .15s" }}
-        onFocus={e => (e.target.style.borderColor = T.primary)}
-        onBlur={e => (e.target.style.borderColor = T.border)}
-      />
-    </div>
-  );
+  const trocarModo = (proximo: "entrar" | "recuperar") => {
+    setModo(proximo);
+    setErrosDeCampo({});
+    setErroGeral(undefined);
+    setLinkEnviado(false);
+    setSenha("");
+  };
 
-  if (forgot) {
+  if (modo === "recuperar") {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div className={estilos.tela}>
         <div>
-          <button onClick={() => setForgot(false)} style={{ background: "none", border: "none", cursor: "pointer", color: T.primary, fontFamily: T.font.display, fontWeight: 600, fontSize: 13, padding: 0, marginBottom: 12 }}>← Voltar</button>
-          <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 22, color: T.text, margin: 0 }}>Recuperar senha</h1>
-          <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: "8px 0 0 0" }}>Enviaremos um link de redefinição para seu e-mail.</p>
+          <button type="button" className={estilos.voltar} onClick={() => trocarModo("entrar")}>
+            ← Voltar
+          </button>
+          <CabecalhoDeAutenticacao
+            titulo="Recuperar senha"
+            descricao="Informe o e-mail da sua conta. Enviaremos um link para cadastrar uma nova senha."
+          />
         </div>
 
-        {forgotSent ? (
-          <div style={{ backgroundColor: T.successBg, border: `1px solid ${T.successBorder}`, borderRadius: 12, padding: 16, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>✉️</div>
-            <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 15, color: "#1A7A38" }}>E-mail enviado!</div>
-            <p style={{ fontFamily: T.font.body, fontSize: 13, color: "#2A9449", margin: "4px 0 0" }}>Verifique sua caixa de entrada e siga as instruções.</p>
-          </div>
+        {linkEnviado ? (
+          <Aviso tom="sucesso" titulo="Verifique seu e-mail">
+            Se houver uma conta com esse endereço, você vai receber o link em instantes. Ele expira em
+            uma hora e só pode ser usado uma vez.
+          </Aviso>
         ) : (
-          <form onSubmit={handleForgot} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {field("E-mail", email, setEmail, "email", "seu@email.com")}
-            <button type="submit" style={{ padding: "12px", backgroundColor: T.primary, color: "#fff", border: "none", borderRadius: 10, fontFamily: T.font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+          <form className={estilos.formulario} method="post" noValidate onSubmit={aoRecuperar}>
+            {erroGeral && <Aviso tom="erro">{erroGeral}</Aviso>}
+            <Campo
+              rotulo="E-mail"
+              type="email"
+              autoComplete="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+              erro={errosDeCampo.email}
+              obrigatorio
+            />
+            <Botao type="submit" tamanho="grande" larguraTotal carregando={enviando}>
               Enviar link de recuperação
-            </button>
+            </Botao>
           </form>
         )}
       </div>
@@ -66,36 +125,53 @@ export default function Entrar() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-      <div>
-        <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 26, color: T.text, margin: "0 0 6px", letterSpacing: "-0.5px" }}>Bem-vindo de volta</h1>
-        <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: 0 }}>Entre na sua conta para continuar negociando.</p>
-      </div>
+    <div className={estilos.tela}>
+      <CabecalhoDeAutenticacao
+        titulo="Bem-vindo de volta"
+        descricao="Entre na sua conta para continuar negociando."
+      />
 
-      <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {field("E-mail", email, setEmail, "email", "seu@email.com")}
-        {field("Senha", password, setPassword, "password", "••••••••")}
+      {senhaRedefinida && !erroGeral && (
+        <Aviso tom="sucesso">Senha alterada. Entre com a nova senha.</Aviso>
+      )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button type="button" onClick={() => setForgot(true)} style={{ background: "none", border: "none", cursor: "pointer", color: T.primary, fontFamily: T.font.body, fontSize: 13, fontWeight: 500, padding: 0 }}>
+      <form className={estilos.formulario} method="post" noValidate onSubmit={aoEntrar}>
+        {erroGeral && <Aviso tom="erro">{erroGeral}</Aviso>}
+        <Campo
+          rotulo="E-mail"
+          type="email"
+          autoComplete="username"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(evento) => setEmail(evento.target.value)}
+          erro={errosDeCampo.email}
+          obrigatorio
+        />
+        <Campo
+          rotulo="Senha"
+          type="password"
+          autoComplete="current-password"
+          value={senha}
+          onChange={(evento) => setSenha(evento.target.value)}
+          erro={errosDeCampo.senha}
+          obrigatorio
+        />
+
+        <div className={estilos.alinharDireita}>
+          <button type="button" className={estilos.linkTexto} onClick={() => trocarModo("recuperar")}>
             Esqueci minha senha
           </button>
         </div>
 
-        <button type="submit" disabled={loading} style={{ padding: "13px", background: "linear-gradient(135deg,#E8803F,#D97338)", color: "#fff", border: "none", borderRadius: 10, fontFamily: T.font.display, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.8 : 1, marginTop: 4 }}>
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
+        <Botao type="submit" tamanho="grande" larguraTotal carregando={enviando}>
+          {enviando ? "Entrando…" : "Entrar"}
+        </Botao>
       </form>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, height: 1, backgroundColor: T.border }} />
-        <span style={{ fontFamily: T.font.body, fontSize: 12, color: T.textLight }}>ou</span>
-        <div style={{ flex: 1, height: 1, backgroundColor: T.border }} />
-      </div>
+      <div className={estilos.divisor}>ou</div>
 
-      <p style={{ textAlign: "center", fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: 0 }}>
-        Não tem conta?{" "}
-        <Link to="/cadastrar" style={{ color: T.primary, fontWeight: 600, textDecoration: "none" }}>Criar conta grátis</Link>
+      <p className={estilos.rodape}>
+        Não tem conta? <Link to={linkCadastro}>Criar conta grátis</Link>
       </p>
     </div>
   );

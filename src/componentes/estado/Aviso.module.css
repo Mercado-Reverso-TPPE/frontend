@@ -1,0 +1,26 @@
+.aviso {
+  padding: var(--espaco-1-5) var(--espaco-2);
+  border-radius: var(--raio-card);
+  font-size: 13px;
+  line-height: var(--altura-linha-corpo);
+}
+
+.aviso strong {
+  display: block;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-corpo);
+}
+
+.erro {
+  composes: aviso;
+  border: 1px solid var(--erro);
+  background-color: var(--erro-superficie);
+  color: var(--texto-primario);
+}
+
+.sucesso {
+  composes: aviso;
+  border: 1px solid var(--sucesso-borda);
+  background-color: var(--sucesso-superficie);
+  color: var(--sucesso-texto);
+}

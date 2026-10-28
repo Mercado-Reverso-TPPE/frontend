@@ -1,19 +1,20 @@
+import type { OrdenacaoDoFeed } from "@/api/anuncios";
 import { IChevronDown } from "@/componentes/icones";
 import { T } from "@/estilos/tokens";
 import { fmtPlural } from "@/utils/formato";
-import type { OrdenacaoDeAnuncio } from "@/api/anuncios";
 import estilos from "./Feed.module.css";
 
-const ORDENACOES: { valor: OrdenacaoDeAnuncio; rotulo: string }[] = [
+const ORDENACOES: { valor: OrdenacaoDoFeed; rotulo: string }[] = [
+  { valor: "distancia", rotulo: "Mais próximos" },
   { valor: "recentes", rotulo: "Mais recentes" },
-  { valor: "proximos", rotulo: "Mais próximos" },
-  { valor: "maior-valor", rotulo: "Maior valor" },
+  { valor: "preco_maximo", rotulo: "Maior orçamento" },
+  { valor: "preco_minimo", rotulo: "Menor orçamento" },
 ];
 
 interface ResumoDaListaProps {
   total: number;
-  ordenacao: OrdenacaoDeAnuncio;
-  aoMudarOrdenacao: (ordenacao: OrdenacaoDeAnuncio) => void;
+  ordenacao: OrdenacaoDoFeed;
+  aoMudarOrdenacao: (ordenacao: OrdenacaoDoFeed) => void;
 }
 
 /** Linha acima da grade: quantos anúncios o filtro trouxe e como ordená-los. */
@@ -31,7 +32,7 @@ export function ResumoDaLista({ total, ordenacao, aoMudarOrdenacao }: ResumoDaLi
             id="ordenar-feed"
             className={estilos.selecao}
             value={ordenacao}
-            onChange={(evento) => aoMudarOrdenacao(evento.target.value as OrdenacaoDeAnuncio)}
+            onChange={(evento) => aoMudarOrdenacao(evento.target.value as OrdenacaoDoFeed)}
           >
             {ORDENACOES.map((opcao) => (
               <option key={opcao.valor} value={opcao.valor}>

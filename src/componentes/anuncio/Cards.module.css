@@ -372,3 +372,9 @@
     height: 170px;
   }
 }
+
+.compactoAcoes {
+  display: flex;
+  gap: var(--espaco-1);
+  margin-top: var(--espaco-1);
+}

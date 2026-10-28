@@ -40,3 +40,7 @@ export const fmtMetrica = (valor: number) =>
   valor >= 10000
     ? `${(valor / 1000).toFixed(valor % 1000 === 0 ? 0 : 1).replace(".", ",")}k`
     : fmtNumero(valor);
+
+/** Data no fuso de Brasília: `2026-08-31T14:00:00Z` → `31/08/2026`. */
+export const fmtData = (iso: string) =>
+  new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
