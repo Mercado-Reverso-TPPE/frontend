@@ -18,6 +18,8 @@ Anúncios de "procura-se" integrados à API (QRO-04, QRO-05): publicar, editar, 
 
 Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquanto a oferta aguarda resposta, e acompanhar o status em "Minhas ofertas". A tela de oferta não pede nem mostra ofertas concorrentes.
 
+Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, distância máxima e ordenação combinam entre si e ficam na URL; a lista carrega por páginas; o detalhe volta ao feed com os mesmos filtros. Com a API ligada, o feed exige sessão e localização, porque o backend só devolve anúncios cujo raio alcança quem busca.
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -28,7 +30,7 @@ SPA em React + TypeScript + Vite, com React Router para navegação, TanStack Qu
 src/
 ├── api/                 # cliente HTTP, recursos e tipos do contrato
 │   ├── cliente.ts       # fetch com base de URL, tempo limite e ErroDeApi
-│   ├── anuncios.ts      # recurso do feed (com fallback de demonstração)
+│   ├── anuncios.ts      # feed, detalhe e recomendações (com fallback de demonstração)
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
@@ -60,7 +62,7 @@ src/
 
 | Rota | Tela | Sessão |
 | :--- | :--- | :--- |
-| `/` | Feed com hero, filtros, cards e carrosséis | pública |
+| `/` | Feed com busca, filtros combinados, paginação e carrosséis | pública (com a API, pede para entrar) |
 | `/entrar` · `/cadastrar` | Autenticação, criação de conta e pedido de nova senha | pública |
 | `/redefinir-senha?uid=…&token=…` | Nova senha a partir do link enviado por e-mail | pública |
 | `/confirmar-email?token=…` | Confirma a troca de e-mail a partir do link enviado | pública |
@@ -165,7 +167,8 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 
 - Migrar as telas exportadas do Figma dos estilos embutidos para os componentes-base e os tokens — é o que libera o tema escuro.
 - Substituir os dados de demonstração por chamadas reais quando o contrato da API for publicado, começando pelo feed.
-- Paginação incremental do feed, recomendações e proximidade dependem de endpoints ainda não definidos.
+- Recomendações: a interface convida a ofertar ou descarta (sem criar oferta), mas o endpoint ainda não existe no backend. Com a API ligada, o carrossel fica oculto.
+- Busca por cidade e cards "Vendendo" no feed ficaram de fora até a equipe definir essas regras.
 - Formulários com React Hook Form + Zod e mapa com Leaflet entram junto com os fluxos que os exigem.
 - O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
 - A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.

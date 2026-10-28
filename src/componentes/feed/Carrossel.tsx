@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
+import type { Anuncio } from "@/api/meusAnuncios";
 import { CardCompacto } from "@/componentes/anuncio";
 import { IChevronLeft, IChevronRight } from "@/componentes/icones";
-import type { AnyAd } from "@/api/tipos";
 import estilos from "./Feed.module.css";
 
 const PASSO = 240;
@@ -10,13 +10,15 @@ interface CarrosselProps {
   titulo: string;
   subtitulo: string;
   icone: string;
-  anuncios: AnyAd[];
+  anuncios: Anuncio[];
   /** Cor do acento da seção: a marca por padrão, `info` para proximidade. */
   acento?: "marca" | "info";
+  /** Ações extras em cada card, como convidar ou descartar uma recomendação. */
+  acoesDoCard?: (anuncio: Anuncio) => ReactNode;
 }
 
 /** Seção rolável de anúncios — recomendações e "perto de você". */
-export function Carrossel({ titulo, subtitulo, icone, anuncios, acento = "marca" }: CarrosselProps) {
+export function Carrossel({ titulo, subtitulo, icone, anuncios, acento = "marca", acoesDoCard }: CarrosselProps) {
   const trilha = useRef<HTMLDivElement>(null);
 
   const rolar = (direcao: "esquerda" | "direita") =>
@@ -25,7 +27,7 @@ export function Carrossel({ titulo, subtitulo, icone, anuncios, acento = "marca"
   if (anuncios.length === 0) return null;
 
   return (
-    <section className={estilos.secao}>
+    <section className={estilos.secao} aria-label={titulo}>
       <div className={estilos.secaoTopo}>
         <div className={estilos.secaoIdentidade}>
           <span
@@ -62,8 +64,8 @@ export function Carrossel({ titulo, subtitulo, icone, anuncios, acento = "marca"
       </div>
 
       <div className={`${estilos.trilha} sem-barra-de-rolagem`} ref={trilha}>
-        {anuncios.map((anuncio, indice) => (
-          <CardCompacto key={`${anuncio.kind}-${anuncio.id}-${indice}`} anuncio={anuncio} />
+        {anuncios.map((anuncio) => (
+          <CardCompacto key={anuncio.id} anuncio={anuncio} acoes={acoesDoCard?.(anuncio)} />
         ))}
       </div>
     </section>

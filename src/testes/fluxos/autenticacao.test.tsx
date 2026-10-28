@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CHAVE_RENOVACAO } from "@/hooks/useSessao";
 import { perfilDeTeste, simularApi } from "../apiFalsa";
@@ -115,7 +115,7 @@ describe("sessão", () => {
       caminho: "/sessoes",
       corpo: { refresh: "renovacao-1" },
     });
-    expect(await screen.findByRole("link", { name: "Entrar" })).toBeInTheDocument();
+    expect(await within(screen.getByRole("banner")).findByRole("link", { name: "Entrar" })).toBeInTheDocument();
   });
 });
 
