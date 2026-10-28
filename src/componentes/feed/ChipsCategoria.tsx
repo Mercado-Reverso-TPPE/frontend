@@ -1,28 +1,24 @@
+import type { Categoria } from "@/api/meusAnuncios";
 import { Chip } from "@/componentes/base";
-import { CATEGORIES } from "@/dados/demo";
 import estilos from "./Feed.module.css";
 
 interface ChipsCategoriaProps {
+  categorias: Categoria[];
+  /** Slug ativo; vazio para todas. */
   ativa: string;
-  aoSelecionar: (categoria: string) => void;
+  aoSelecionar: (slug: string) => void;
 }
 
-/** Trilha de categorias do feed (QRO-07). */
-export function ChipsCategoria({ ativa, aoSelecionar }: ChipsCategoriaProps) {
+/** Trilha de categorias do feed (QRO-07), com as categorias ativas da API. */
+export function ChipsCategoria({ categorias, ativa, aoSelecionar }: ChipsCategoriaProps) {
   return (
-    <div
-      className={`${estilos.chips} sem-barra-de-rolagem`}
-      role="group"
-      aria-label="Categorias"
-    >
-      {CATEGORIES.map((categoria) => (
-        <Chip
-          key={categoria.id}
-          ativo={ativa === categoria.id}
-          contagem={categoria.count}
-          onClick={() => aoSelecionar(categoria.id)}
-        >
-          {categoria.label}
+    <div className={`${estilos.chips} sem-barra-de-rolagem`} role="group" aria-label="Categorias">
+      <Chip ativo={ativa === ""} onClick={() => aoSelecionar("")}>
+        Todas
+      </Chip>
+      {categorias.map((categoria) => (
+        <Chip key={categoria.slug} ativo={ativa === categoria.slug} onClick={() => aoSelecionar(categoria.slug)}>
+          {categoria.nome}
         </Chip>
       ))}
     </div>

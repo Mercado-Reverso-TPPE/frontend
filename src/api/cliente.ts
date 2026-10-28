@@ -10,12 +10,13 @@
  * demonstração e `apiConfigurada()` devolve `false`.
  */
 
-export const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+/** Base da API. Lida a cada chamada para que os testes possam trocá-la. */
+export const urlDaApi = () => (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 const TEMPO_LIMITE_PADRAO = Number(import.meta.env.VITE_API_TIMEOUT ?? 15000);
 
 /** Há uma API configurada para este ambiente? */
-export const apiConfigurada = () => API_URL !== "";
+export const apiConfigurada = () => urlDaApi() !== "";
 
 export type CodigoDeErro =
   | "rede"
@@ -67,6 +68,29 @@ export function definirTokenDeAcesso(token: string | null) {
   tokenDeAcesso = token;
 }
 
+/**
+ * Renova o token de acesso quando ele expira. Devolve `true` se conseguiu.
+ * Quem registra é a sessão, que sabe onde está o token de renovação.
+ */
+type Renovador = () => Promise<boolean>;
+let renovador: Renovador | null = null;
+let renovacaoEmCurso: Promise<boolean> | null = null;
+
+export function definirRenovadorDeSessao(funcao: Renovador | null) {
+  renovador = funcao;
+}
+
+/** Várias requisições com 401 ao mesmo tempo disparam uma renovação só. */
+function renovarSessao() {
+  if (!renovador) return Promise.resolve(false);
+  renovacaoEmCurso ??= renovador()
+    .catch(() => false)
+    .finally(() => {
+      renovacaoEmCurso = null;
+    });
+  return renovacaoEmCurso;
+}
+
 export type Parametros = Record<string, string | number | boolean | undefined | null>;
 
 export interface OpcoesDeRequisicao {
@@ -76,10 +100,12 @@ export interface OpcoesDeRequisicao {
   cabecalhos?: Record<string, string>;
   sinal?: AbortSignal;
   tempoLimiteMs?: number;
+  /** Não tenta renovar a sessão num 401 (login, renovação e a nova tentativa). */
+  semRenovacao?: boolean;
 }
 
 function montarUrl(caminho: string, parametros?: Parametros) {
-  const base = `${API_URL}${caminho.startsWith("/") ? caminho : `/${caminho}`}`;
+  const base = `${urlDaApi()}${caminho.startsWith("/") ? caminho : `/${caminho}`}`;
   if (!parametros) return base;
 
   const busca = new URLSearchParams();
@@ -96,7 +122,15 @@ function montarUrl(caminho: string, parametros?: Parametros) {
  * chega às telas como `ErroDeApi`.
  */
 export async function requisicao<T>(caminho: string, opcoes: OpcoesDeRequisicao = {}): Promise<T> {
-  const { metodo = "GET", corpo, parametros, cabecalhos, sinal, tempoLimiteMs = TEMPO_LIMITE_PADRAO } = opcoes;
+  const {
+    metodo = "GET",
+    corpo,
+    parametros,
+    cabecalhos,
+    sinal,
+    tempoLimiteMs = TEMPO_LIMITE_PADRAO,
+    semRenovacao = false,
+  } = opcoes;
 
   if (!apiConfigurada()) {
     throw new ErroDeApi(
@@ -126,6 +160,11 @@ export async function requisicao<T>(caminho: string, opcoes: OpcoesDeRequisicao 
       },
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
     });
+
+    // Token expirado: renova uma vez e repete a mesma chamada.
+    if (resposta.status === 401 && tokenDeAcesso && !semRenovacao && (await renovarSessao())) {
+      return await requisicao<T>(caminho, { ...opcoes, semRenovacao: true });
+    }
 
     if (resposta.status === 204) return undefined as T;
 
@@ -173,6 +212,51 @@ export async function requisicao<T>(caminho: string, opcoes: OpcoesDeRequisicao 
   }
 }
 
+/** Erros de validação separados por campo, como o Django REST Framework devolve. */
+export interface ErrosDeValidacao {
+  campos: Record<string, string>;
+  /** Erro que não pertence a um campo (`non_field_errors`, `detail` ou lista solta). */
+  geral?: string;
+}
+
+function primeiraMensagem(valor: unknown): string | undefined {
+  if (typeof valor === "string") return valor;
+  if (Array.isArray(valor)) return valor.map(primeiraMensagem).find(Boolean);
+  if (valor && typeof valor === "object") return Object.values(valor).map(primeiraMensagem).find(Boolean);
+  return undefined;
+}
+
+/**
+ * Lê o corpo de um 400 e devolve uma mensagem por campo. Objetos aninhados
+ * (como `localizacao`) viram `localizacao.cidade`.
+ */
+export function errosDeValidacao(erro: unknown): ErrosDeValidacao {
+  const resultado: ErrosDeValidacao = { campos: {} };
+  if (!(erro instanceof ErroDeApi) || erro.status !== 400) return resultado;
+
+  const corpo = erro.detalhes;
+  if (Array.isArray(corpo) || typeof corpo === "string") {
+    resultado.geral = primeiraMensagem(corpo);
+    return resultado;
+  }
+  if (!corpo || typeof corpo !== "object") return resultado;
+
+  const visitar = (objeto: Record<string, unknown>, prefixo: string) => {
+    for (const [chave, valor] of Object.entries(objeto)) {
+      if (chave === "non_field_errors" || chave === "detail") {
+        resultado.geral ??= primeiraMensagem(valor);
+      } else if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+        visitar(valor as Record<string, unknown>, `${prefixo}${chave}.`);
+      } else {
+        const mensagem = primeiraMensagem(valor);
+        if (mensagem) resultado.campos[`${prefixo}${chave}`] = mensagem;
+      }
+    }
+  };
+  visitar(corpo as Record<string, unknown>, "");
+  return resultado;
+}
+
 /** Atalhos por verbo. */
 export const api = {
   get: <T>(caminho: string, opcoes?: Omit<OpcoesDeRequisicao, "metodo" | "corpo">) =>
@@ -183,6 +267,6 @@ export const api = {
     requisicao<T>(caminho, { ...opcoes, metodo: "PUT", corpo }),
   patch: <T>(caminho: string, corpo?: unknown, opcoes?: Omit<OpcoesDeRequisicao, "metodo" | "corpo">) =>
     requisicao<T>(caminho, { ...opcoes, metodo: "PATCH", corpo }),
-  remove: <T>(caminho: string, opcoes?: Omit<OpcoesDeRequisicao, "metodo" | "corpo">) =>
-    requisicao<T>(caminho, { ...opcoes, metodo: "DELETE" }),
+  remove: <T>(caminho: string, corpo?: unknown, opcoes?: Omit<OpcoesDeRequisicao, "metodo" | "corpo">) =>
+    requisicao<T>(caminho, { ...opcoes, metodo: "DELETE", corpo }),
 };

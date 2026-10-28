@@ -1,0 +1,98 @@
+.tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
+.cabecalho h1 {
+  margin: 0 0 6px;
+  font-family: var(--fonte-titulo);
+  font-size: 24px;
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.5px;
+  color: var(--texto-primario);
+}
+
+.cabecalho p {
+  margin: 0;
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-secundario);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+.linhaCidade {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: var(--espaco-1-5);
+}
+
+.alinharDireita {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(var(--espaco-1) * -1);
+}
+
+.linkTexto {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--fonte-corpo);
+  font-size: 13px;
+  font-weight: var(--peso-medio);
+  color: var(--laranja);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.linkTexto:hover {
+  color: var(--laranja-hover);
+  text-decoration: underline;
+}
+
+.voltar {
+  composes: linkTexto;
+  margin-bottom: var(--espaco-1-5);
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-semibold);
+}
+
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-1-5);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.divisor::before,
+.divisor::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--borda);
+}
+
+.rodape {
+  margin: 0;
+  text-align: center;
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-secundario);
+}
+
+.rodape a {
+  font-weight: var(--peso-semibold);
+  color: var(--laranja);
+  text-decoration: none;
+}
+
+.legal {
+  margin: 0;
+  text-align: center;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}

@@ -10,7 +10,17 @@ A referência de arquitetura, telas e identidade visual é a documentação do g
 
 A fundação da SPA está montada: estrutura de pastas da arquitetura documentada, rotas com os caminhos canônicos, layout compartilhado, tokens visuais centralizados, componentes-base, cliente HTTP, padrões de carregamento, erro e vazio, e testes de componente e de fluxo de tela.
 
-As telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
+Autenticação integrada à API (QRO-01, QRO-02): cadastro, entrar, sair, recuperação e redefinição de senha, proteção de rotas com retorno ao destino e renovação automática do token.
+
+Perfil integrado à API (QRO-03): dados pessoais, foto (por link), localização de referência geocodificada pelo backend e troca de e-mail com confirmação. O que muda no perfil aparece na hora no avatar e no menu da conta.
+
+Anúncios de "procura-se" integrados à API (QRO-04, QRO-05): publicar, editar, pausar, reativar e encerrar, com raio em KM e prévia do alcance. As ações de cada anúncio dependem do status que a API devolve (`acoesPermitidas` em `api/meusAnuncios.ts`).
+
+Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquanto a oferta aguarda resposta, e acompanhar o status em "Minhas ofertas". A tela de oferta não pede nem mostra ofertas concorrentes.
+
+Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, distância máxima e ordenação combinam entre si e ficam na URL; a lista carrega por páginas; o detalhe volta ao feed com os mesmos filtros. Com a API ligada, o feed exige sessão e localização, porque o backend só devolve anúncios cujo raio alcança quem busca.
+
+As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
 
@@ -20,10 +30,15 @@ SPA em React + TypeScript + Vite, com React Router para navegação, TanStack Qu
 src/
 ├── api/                 # cliente HTTP, recursos e tipos do contrato
 │   ├── cliente.ts       # fetch com base de URL, tempo limite e ErroDeApi
-│   ├── anuncios.ts      # recurso do feed (com fallback de demonstração)
+│   ├── anuncios.ts      # feed, detalhe e recomendações (com fallback de demonstração)
+│   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
+│   ├── perfil.ts        # edição do perfil e troca de e-mail
+│   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
+│   ├── ofertas.ts       # ofertas do vendedor
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
+│   ├── autenticacao/    # cabeçalho e avisos das telas de conta
 │   ├── base/            # Botao, Chip, Badge, Campo, Avatar
 │   ├── estado/          # Carregando, Esqueleto, ErroAoCarregar, EstadoVazio
 │   ├── anuncio/         # CardProcurando, CardVendendo, CardCompacto
@@ -38,7 +53,7 @@ src/
 ├── hooks/               # useSessao, useFiltros, useAnuncios, useLocalizacao
 ├── paginas/             # uma pasta por rota
 ├── testes/              # setup, utilitários, testes de componente e de fluxo
-├── utils/formato.ts     # valores em reais, distâncias em KM, plurais
+├── utils/               # formato (reais, KM, plurais), navegação e validação
 ├── App.tsx              # provedores da aplicação
 └── rotas.tsx            # mapa de rotas
 ```
@@ -47,14 +62,18 @@ src/
 
 | Rota | Tela | Sessão |
 | :--- | :--- | :--- |
-| `/` | Feed com hero, filtros, cards e carrosséis | pública |
-| `/entrar` · `/cadastrar` | Autenticação e criação de conta | pública |
+| `/` | Feed com busca, filtros combinados, paginação e carrosséis | pública (com a API, pede para entrar) |
+| `/entrar` · `/cadastrar` | Autenticação, criação de conta e pedido de nova senha | pública |
+| `/redefinir-senha?uid=…&token=…` | Nova senha a partir do link enviado por e-mail | pública |
+| `/confirmar-email?token=…` | Confirma a troca de e-mail a partir do link enviado | pública |
 | `/anuncios/:id` | Detalhe do anúncio | pública |
 | `/perfil` | Dados cadastrais e localização de referência | exige sessão |
 | `/anunciar` | Formulário de "procura-se" | exige sessão |
 | `/meus-anuncios` | Lista com status e contagem de ofertas | exige sessão |
+| `/meus-anuncios/:id/editar` | Edição de um anúncio ativo ou pausado | exige sessão |
 | `/minha-loja` | Catálogo de produtos do vendedor | exige sessão |
-| `/anuncios/:id/ofertar` | Envio de oferta | exige sessão |
+| `/anuncios/:id/ofertar` | Envio, edição e retirada da própria oferta | exige sessão |
+| `/minhas-ofertas` | Ofertas enviadas e o status de cada uma | exige sessão |
 | `/anuncios/:id/ofertas` | Ofertas recebidas e comparação | exige sessão |
 | `/anuncios/:id/ofertas/:ofertaId/contraproposta` | Contraproposta | exige sessão |
 | `/negociacoes/:id` | Chat da negociação | exige sessão |
@@ -62,7 +81,16 @@ src/
 | `/notificacoes` | Central de notificações | exige sessão |
 | `/historico` | Negociações concluídas e canceladas | exige sessão |
 
-Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Rota inexistente cai na tela de "página não existe".
+Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Só destinos internos são aceitos em `retorno`; qualquer outro volta para o feed. Rota inexistente cai na tela de "página não existe".
+
+### Sessão
+
+- `POST /sessoes` devolve o par JWT. O token de acesso fica só em memória, no cliente HTTP; o de renovação fica no `sessionStorage`, para a sessão sobreviver a um recarregamento da aba.
+- Ao abrir o app com um token de renovação guardado, a sessão é restaurada antes de qualquer rota privada decidir para onde ir.
+- Um 401 com sessão aberta dispara uma única renovação (`POST /sessoes/renovar`) e repete a chamada; se a renovação falhar, a sessão é encerrada.
+- Sair chama `DELETE /sessoes` para invalidar o token de renovação e limpa o cache do TanStack Query.
+- A senha só existe no estado do formulário e no corpo da requisição: os formulários usam `method="post"`, a senha é apagada do campo depois de um erro e nada dela vai para a URL ou para o armazenamento do navegador.
+- Credencial errada e conta inexistente mostram a mesma mensagem, e o pedido de nova senha confirma o envio do mesmo jeito exista ou não a conta.
 
 ### Tokens visuais
 
@@ -128,8 +156,10 @@ Os testes vivem em `src/testes/`: `componentes/` cobre os componentes-base e os 
 
 | Variável | Efeito |
 | :--- | :--- |
-| `VITE_API_URL` | Base da API. Vazia, a SPA usa os dados de demonstração. |
+| `VITE_API_URL` | Base da API, com o prefixo de versão (ex.: `http://localhost:8000/api/v1`). Vazia, a SPA usa os dados de demonstração. |
 | `VITE_API_TIMEOUT` | Tempo limite de cada requisição, em ms (padrão 15000). |
+
+No backend, `CORS_ALLOWED_ORIGINS` precisa incluir a origem do frontend `PASSWORD_RESET_URL` precisa apontar para `<origem do frontend>/redefinir-senha` e `EMAIL_CHANGE_URL` para `<origem do frontend>/confirmar-email` — os padrões de lá usam `localhost:3000`.
 
 O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o navegador usa as fontes de fallback declaradas nos tokens.
 
@@ -137,6 +167,13 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 
 - Migrar as telas exportadas do Figma dos estilos embutidos para os componentes-base e os tokens — é o que libera o tema escuro.
 - Substituir os dados de demonstração por chamadas reais quando o contrato da API for publicado, começando pelo feed.
-- Paginação incremental do feed, recomendações e proximidade dependem de endpoints ainda não definidos.
+- Recomendações: a interface convida a ofertar ou descarta (sem criar oferta), mas o endpoint ainda não existe no backend. Com a API ligada, o carrossel fica oculto.
+- Busca por cidade e cards "Vendendo" no feed ficaram de fora até a equipe definir essas regras.
 - Formulários com React Hook Form + Zod e mapa com Leaflet entram junto com os fluxos que os exigem.
+- O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
+- A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
+- A prévia do alcance em `/anunciar` é um desenho proporcional, não um mapa. O mapa entra com Leaflet quando um fluxo precisar de geografia real.
+- "Ver ofertas" leva a `/anuncios/:id/ofertas`, que ainda usa dados de demonstração até a issue de ofertas recebidas.
+- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend); a escolha do produto na oferta vem com a issue do catálogo.
+- `GET /ofertas/meus` não traz o título do anúncio, então "Minhas ofertas" mostra o produto ou a descrição e um link para o anúncio.
 - Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

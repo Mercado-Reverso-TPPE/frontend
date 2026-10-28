@@ -1,0 +1,123 @@
+.pagina {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: var(--espaco-5) var(--respiro-lateral) 60px;
+}
+
+.titulo {
+  margin: 0 0 var(--espaco-3);
+  font-family: var(--fonte-titulo);
+  font-size: 28px;
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.5px;
+  color: var(--texto-primario);
+}
+
+.cartao {
+  margin-bottom: var(--espaco-2);
+  padding: 28px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-modal);
+  background-color: var(--fundo-elevado);
+}
+
+.cartao h2 {
+  margin: 0 0 6px;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-h3);
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+.explicacao {
+  margin: 0 0 var(--espaco-2);
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.identidade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-3);
+}
+
+.nome {
+  margin: 0 0 4px;
+  font-family: var(--fonte-titulo);
+  font-size: 22px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-2);
+}
+
+.gradeLocalizacao {
+  display: grid;
+  grid-template-columns: 140px 1fr 96px;
+  gap: var(--espaco-1-5);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1-5);
+}
+
+.valorAtual {
+  margin: 0 0 var(--espaco-2);
+  padding: var(--espaco-1-5) var(--espaco-2);
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-primario);
+}
+
+.valorAtual span {
+  display: block;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.atalhos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-1-5);
+}
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: var(--espaco-3) var(--espaco-2) var(--espaco-5);
+  }
+
+  .cartao {
+    padding: var(--espaco-3) var(--espaco-2);
+  }
+
+  .grade,
+  .gradeLocalizacao,
+  .atalhos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comRespiro {
+  margin-top: var(--espaco-2);
+}

@@ -8,18 +8,22 @@ import AnuncioDetalhe from "@/paginas/AnuncioDetalhe";
 import Avaliar from "@/paginas/Avaliar";
 import Cadastrar from "@/paginas/Cadastrar";
 import ConcluirVenda from "@/paginas/ConcluirVenda";
+import ConfirmarEmail from "@/paginas/ConfirmarEmail";
 import Contraproposta from "@/paginas/Contraproposta";
+import EditarAnuncio from "@/paginas/EditarAnuncio";
 import Entrar from "@/paginas/Entrar";
 import Feed from "@/paginas/Feed";
 import Historico from "@/paginas/Historico";
 import MeusAnuncios from "@/paginas/MeusAnuncios";
 import MinhaLoja from "@/paginas/MinhaLoja";
+import MinhasOfertas from "@/paginas/MinhasOfertas";
 import NaoEncontrada from "@/paginas/NaoEncontrada";
 import Negociacao from "@/paginas/Negociacao";
 import Notificacoes from "@/paginas/Notificacoes";
 import OfertarProduto from "@/paginas/OfertarProduto";
 import OfertasRecebidas from "@/paginas/OfertasRecebidas";
 import Perfil from "@/paginas/Perfil";
+import RedefinirSenha from "@/paginas/RedefinirSenha";
 
 /**
  * Mapa de rotas da SPA — os caminhos são os documentados em
@@ -42,7 +46,9 @@ export const rotas: RouteObject[] = [
           { path: "perfil", Component: Perfil },
           { path: "anunciar", Component: Anunciar },
           { path: "meus-anuncios", Component: MeusAnuncios },
+          { path: "meus-anuncios/:id/editar", Component: EditarAnuncio },
           { path: "minha-loja", Component: MinhaLoja },
+          { path: "minhas-ofertas", Component: MinhasOfertas },
           { path: "anuncios/:id/ofertar", Component: OfertarProduto },
           { path: "anuncios/:id/ofertas", Component: OfertasRecebidas },
           { path: "anuncios/:id/ofertas/:ofertaId/contraproposta", Component: Contraproposta },
@@ -63,6 +69,8 @@ export const rotas: RouteObject[] = [
     children: [
       { path: "entrar", Component: Entrar },
       { path: "cadastrar", Component: Cadastrar },
+      { path: "redefinir-senha", Component: RedefinirSenha },
+      { path: "confirmar-email", Component: ConfirmarEmail },
     ],
   },
 ];
