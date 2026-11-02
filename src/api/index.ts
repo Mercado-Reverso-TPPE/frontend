@@ -7,3 +7,4 @@ export * from "./meusAnuncios";
 export * from "./ofertas";
 export * from "./paginacao";
 export * from "./catalogo";
+export * from "./negociacoes";
