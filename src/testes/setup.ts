@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 import { definirTokenDeAcesso } from "@/api/cliente";
+import { reiniciarDemoDoCatalogo } from "@/api/catalogo";
 import { reiniciarDemoDeMeusAnuncios } from "@/api/meusAnuncios";
 import { reiniciarDemoDeOfertas } from "@/api/ofertas";
 
@@ -14,4 +15,5 @@ afterEach(() => {
   vi.unstubAllGlobals();
   reiniciarDemoDeMeusAnuncios();
   reiniciarDemoDeOfertas();
+  reiniciarDemoDoCatalogo();
 });

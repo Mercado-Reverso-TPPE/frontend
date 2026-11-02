@@ -16,6 +16,8 @@ export interface ChamadaRegistrada {
 
 type Manipulador = (corpo: unknown, chamada: ChamadaRegistrada) => RespostaFalsa;
 
+const ROTA_DO_SINO = "GET /notificacoes/nao-lidas";
+
 /**
  * Liga `VITE_API_URL` e troca o `fetch` por um backend em memória.
  * As rotas são `"MÉTODO /caminho"` sem o prefixo `/api/v1`.
@@ -30,13 +32,17 @@ export function simularApi(rotas: Record<string, Manipulador>) {
     const chamada: ChamadaRegistrada = {
       metodo: init.method ?? "GET",
       caminho: endereco.pathname.replace(/^\/api\/v1/, ""),
-      corpo: init.body ? JSON.parse(String(init.body)) : undefined,
+      corpo: init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined,
       autorizacao: cabecalhos.Authorization,
       parametros: Object.fromEntries(endereco.searchParams),
     };
-    chamadas.push(chamada);
+    const rota = `${chamada.metodo} ${chamada.caminho}`;
+    // O sino do cabeçalho consulta a contagem sozinho; essa chamada de fundo
+    // não entra em `chamadas`, para os testes contarem só o que a tela pediu.
+    const doSino = rota === ROTA_DO_SINO && !rotas[rota];
+    if (!doSino) chamadas.push(chamada);
 
-    const manipulador = rotas[`${chamada.metodo} ${chamada.caminho}`];
+    const manipulador: Manipulador | undefined = doSino ? () => ({ corpo: { nao_lidas: 0 } }) : rotas[rota];
     const { status = 200, corpo } = manipulador
       ? manipulador(chamada.corpo, chamada)
       : { status: 404, corpo: { detail: "Não encontrado." } };

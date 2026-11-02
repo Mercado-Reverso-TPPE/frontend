@@ -5,3 +5,5 @@ export * from "./autenticacao";
 export * from "./perfil";
 export * from "./meusAnuncios";
 export * from "./ofertas";
+export * from "./paginacao";
+export * from "./catalogo";
