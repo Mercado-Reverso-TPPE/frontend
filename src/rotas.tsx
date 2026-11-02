@@ -12,6 +12,7 @@ import EditarAnuncio from "@/paginas/EditarAnuncio";
 import Entrar from "@/paginas/Entrar";
 import Feed from "@/paginas/Feed";
 import Historico from "@/paginas/Historico";
+import HistoricoDetalhe from "@/paginas/HistoricoDetalhe";
 import MeusAnuncios from "@/paginas/MeusAnuncios";
 import MinhaLoja from "@/paginas/MinhaLoja";
 import MinhasOfertas from "@/paginas/MinhasOfertas";
@@ -68,6 +69,7 @@ export const rotas: RouteObject[] = [
           { path: "negociacoes/:id/avaliar", Component: Avaliar },
           { path: "notificacoes", Component: Notificacoes },
           { path: "historico", Component: Historico },
+          { path: "historico/:id", Component: HistoricoDetalhe },
         ],
       },
       { path: "*", Component: NaoEncontrada },
