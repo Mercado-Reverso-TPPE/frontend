@@ -20,6 +20,14 @@ Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquant
 
 Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, distância máxima e ordenação combinam entre si e ficam na URL; a lista carrega por páginas; o detalhe volta ao feed com os mesmos filtros. Com a API ligada, o feed exige sessão e localização, porque o backend só devolve anúncios cujo raio alcança quem busca.
 
+Catálogo do vendedor integrado à API (QRO-08): cadastrar, editar e excluir produtos, mudar o status (disponível, reservado, vendido) e enviar fotos com os limites do backend (até 6, JPEG/PNG/WEBP, 5 MB cada), checados também antes do envio. Na oferta, só produtos disponíveis aparecem e escolher um preenche o formulário.
+
+Palpites e comparação integrados à API (QRO-10, QRO-11): o vendedor dá um palpite sem compromisso e pode ofertar com o mesmo valor; o comprador vê só a faixa agregada quando a API a libera. Em `/anuncios/:id/ofertas` o comprador ordena as ofertas e compara duas ou mais lado a lado; a lista só é pedida depois de confirmar que o anúncio é dele.
+
+Negociação integrada à API (QRO-12 a QRO-16): em `/negociacoes/:id` (`:id` é a oferta) ficam o histórico de valores, a contraproposta com justificativa, rodada e prazo, aceite e recusa com confirmação, e o chat, que fica somente leitura quando a API encerra a conversa. As ações mostradas seguem o estado que a API devolveu (`situacaoDaNegociacao` em `api/ofertas.ts`); limite de rodadas e expiração continuam com o backend. `/negociacoes/:id/concluir` cobre a conclusão bilateral e o cancelamento.
+
+Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central com não lidas e preferências por canal (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico filtrável por papel e status, com detalhe de valores e mensagens.
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -34,7 +42,11 @@ src/
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
-│   ├── ofertas.ts       # ofertas do vendedor
+│   ├── ofertas.ts       # ofertas, contrapropostas, aceite/recusa e palpites
+│   ├── catalogo.ts      # produtos da loja e fotos
+│   ├── negociacoes.ts   # conversa, conclusão, histórico e avaliação
+│   ├── notificacoes.ts  # central, contagem e preferências
+│   ├── paginacao.ts     # cursor e página do DRF
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
@@ -75,11 +87,12 @@ src/
 | `/anuncios/:id/ofertar` | Envio, edição e retirada da própria oferta | exige sessão |
 | `/minhas-ofertas` | Ofertas enviadas e o status de cada uma | exige sessão |
 | `/anuncios/:id/ofertas` | Ofertas recebidas e comparação | exige sessão |
-| `/anuncios/:id/ofertas/:ofertaId/contraproposta` | Contraproposta | exige sessão |
-| `/negociacoes/:id` | Chat da negociação | exige sessão |
-| `/negociacoes/:id/aceitar` · `/concluir` · `/avaliar` | Aceite, conclusão e avaliação | exige sessão |
-| `/notificacoes` | Central de notificações | exige sessão |
-| `/historico` | Negociações concluídas e canceladas | exige sessão |
+| `/negociacoes/:id` | Valores, contraproposta, aceite/recusa e chat da oferta `:id` | exige sessão |
+| `/negociacoes/:id/concluir` · `/avaliar` | Conclusão bilateral e avaliação | exige sessão |
+| `/notificacoes` | Central e preferências (`?aba=preferencias`) | exige sessão |
+| `/historico` · `/historico/:id` | Negociações concluídas e canceladas, e o detalhe | exige sessão |
+
+`/anuncios/:id/ofertas/:ofertaId/contraproposta` e `/negociacoes/:id/aceitar` redirecionam para `/negociacoes/:id`.
 
 Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Só destinos internos são aceitos em `retorno`; qualquer outro volta para o feed. Rota inexistente cai na tela de "página não existe".
 
@@ -173,7 +186,9 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
 - A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
 - A prévia do alcance em `/anunciar` é um desenho proporcional, não um mapa. O mapa entra com Leaflet quando um fluxo precisar de geografia real.
-- "Ver ofertas" leva a `/anuncios/:id/ofertas`, que ainda usa dados de demonstração até a issue de ofertas recebidas.
-- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend); a escolha do produto na oferta vem com a issue do catálogo.
+- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend).
+- A API não expõe `negociacao_id` na oferta nem na conversa. Conclusão e avaliação localizam a negociação pelo histórico e pelas notificações (`localizarNegociacao`); quando o campo existir, a oferta já o lê.
+- A comparação de ofertas não traz distância nem reputação do vendedor: o `OfertaSerializer` ainda não envia esses dados.
+- O limite de rodadas de contraproposta não vem na API; a tela mostra a rodada atual e a mensagem do backend quando o limite é atingido.
+- Sem `VITE_API_URL`, conversa, negociação, notificações e histórico ficam vazios ou avisam que dependem da API; só o catálogo tem demonstração em memória.
 - `GET /ofertas/meus` não traz o título do anúncio, então "Minhas ofertas" mostra o produto ou a descrição e um link para o anúncio.
-- Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

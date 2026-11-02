@@ -1,125 +1,236 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { MOCK_OFFERS, Offer } from "@/dados/demo";
-import { T, comAlfa } from "@/estilos/tokens";
-import { fmtPrice } from "@/utils/formato";
-import { IStar, IPin, ICheck, IX, IMessageCircle, IArrowLeft } from "@/componentes/icones";
+import { useMemo, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { Link, useParams } from "react-router";
+import { ErroDeApi } from "@/api/cliente";
+import { obterMeuAnuncio } from "@/api/meusAnuncios";
+import { listarOfertasRecebidas, ofertaFoiEditada, rotuloDaConservacao, type Oferta } from "@/api/ofertas";
+import { Badge, Botao, Campo } from "@/componentes/base";
+import { Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
+import negociacaoEstilos from "@/componentes/negociacao/Negociacao.module.css";
+import { EstimativaDePreco } from "@/componentes/negociacao/Palpites";
+import { ROTULO_DA_OFERTA, TOM_DA_OFERTA } from "@/componentes/oferta/status";
+import { fmtDataHora, fmtPlural, fmtPrecoExato } from "@/utils/formato";
+import estilos from "@/paginas/MeusAnuncios/MeusAnuncios.module.css";
 
-function Avatar({ initials, color, size = 40 }: { initials: string; color: string; size?: number }) {
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", backgroundColor: color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: size * 0.34, color: "#fff" }}>{initials}</span>
-    </div>
-  );
-}
+type Ordem = "menor_preco" | "maior_preco" | "recentes" | "atualizadas";
 
-const COND_COLOR: Record<string, string> = { Novo: T.success, "Semi-novo": T.info, Usado: "#FF9500" };
+const ORDENS: { valor: Ordem; rotulo: string }[] = [
+  { valor: "menor_preco", rotulo: "Menor preço" },
+  { valor: "maior_preco", rotulo: "Maior preço" },
+  { valor: "recentes", rotulo: "Mais recentes" },
+  { valor: "atualizadas", rotulo: "Alteradas por último" },
+];
 
+const COMPARADORES: Record<Ordem, (a: Oferta, b: Oferta) => number> = {
+  menor_preco: (a, b) => a.preco - b.preco,
+  maior_preco: (a, b) => b.preco - a.preco,
+  recentes: (a, b) => b.criadaEm.localeCompare(a.criadaEm),
+  atualizadas: (a, b) => b.atualizadaEm.localeCompare(a.atualizadaEm),
+};
+
+const tituloDaOferta = (oferta: Oferta) =>
+  oferta.produtoNome || oferta.descricao.split("\n")[0]?.slice(0, 80) || "Oferta";
+
+const rodadas = (oferta: Oferta) =>
+  oferta.historico.reduce((maior, evento) => (evento.tipo === "contraproposta" ? Math.max(maior, evento.rodada) : maior), 0);
+
+/** Atributos comparados lado a lado — os mesmos para toda oferta selecionada. */
+const ATRIBUTOS: { rotulo: string; valor: (oferta: Oferta) => string }[] = [
+  { rotulo: "Preço", valor: (oferta) => fmtPrecoExato(oferta.preco) },
+  { rotulo: "Conservação", valor: (oferta) => rotuloDaConservacao(oferta.estadoDeConservacao) },
+  { rotulo: "Vendedor", valor: (oferta) => oferta.vendedorNome || "—" },
+  { rotulo: "Produto", valor: (oferta) => oferta.produtoNome || "Oferta avulsa" },
+  { rotulo: "Status", valor: (oferta) => ROTULO_DA_OFERTA[oferta.status] },
+  { rotulo: "Enviada em", valor: (oferta) => fmtDataHora(oferta.criadaEm) },
+  { rotulo: "Valor alterado", valor: (oferta) => (ofertaFoiEditada(oferta) ? "Sim" : "Não") },
+  { rotulo: "Rodadas de contraproposta", valor: (oferta) => String(rodadas(oferta)) },
+];
+
+/**
+ * Ofertas recebidas pelo comprador no próprio anúncio (QRO-11). A lista só é
+ * pedida depois de confirmar que o anúncio é da pessoa: um vendedor que
+ * chegue aqui não recebe nem vê ofertas concorrentes.
+ */
 export default function OfertasRecebidas() {
-  const navigate = useNavigate();
-  const [offers, setOffers] = useState(MOCK_OFFERS);
-  const [rejected, setRejected] = useState<Set<string>>(new Set());
+  const { id = "" } = useParams();
+  const [ordem, setOrdem] = useState<Ordem>("menor_preco");
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
 
-  const accept = (id: string) => navigate(`/negociacoes/${id}/aceitar`);
-  const reject = (id: string) => setRejected(r => new Set([...r, id]));
+  const anuncio = useQuery({ queryKey: ["meus-anuncios", "detalhe", id], queryFn: () => obterMeuAnuncio(id) });
 
-  const pending = offers.filter(o => !rejected.has(o.id));
+  const ofertas = useInfiniteQuery({
+    queryKey: ["ofertas", "recebidas", id],
+    queryFn: ({ pageParam }) => listarOfertasRecebidas(id, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (pagina) => pagina.proximo,
+    enabled: anuncio.isSuccess,
+  });
+
+  const lista = useMemo(
+    () => [...(ofertas.data?.pages.flatMap((pagina) => pagina.itens) ?? [])].sort(COMPARADORES[ordem]),
+    [ofertas.data, ordem],
+  );
+  const comparadas = lista.filter((oferta) => selecionadas.includes(oferta.id));
+
+  const alternar = (ofertaId: string) =>
+    setSelecionadas((atuais) =>
+      atuais.includes(ofertaId) ? atuais.filter((item) => item !== ofertaId) : [...atuais, ofertaId],
+    );
+
+  if (anuncio.isPending) {
+    return (
+      <div className={estilos.pagina}>
+        <Carregando rotulo="Carregando anúncio…" />
+      </div>
+    );
+  }
+
+  if (anuncio.isError) {
+    const naoEhDono = anuncio.error instanceof ErroDeApi && [403, 404].includes(anuncio.error.status);
+    return (
+      <div className={estilos.pagina}>
+        {naoEhDono ? (
+          <EstadoVazio
+            icone="🔒"
+            titulo="Só quem publicou vê as ofertas"
+            descricao="As ofertas de um anúncio ficam visíveis apenas para o comprador. Se você é vendedor, acompanhe a sua oferta."
+            acao={{ rotulo: "Ver o anúncio", para: `/anuncios/${id}` }}
+            acaoSecundaria={{ rotulo: "Minhas ofertas", para: "/minhas-ofertas" }}
+          />
+        ) : (
+          <ErroAoCarregar erro={anuncio.error} aoTentarDeNovo={() => anuncio.refetch()} />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 28px 60px" }}>
-      <button onClick={() => navigate(-1)} style={{ display: "flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.textMid, padding: 0, marginBottom: 24 }}>
-        <IArrowLeft size={16} color={T.textMid} />Voltar ao anúncio
-      </button>
-
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 28, color: T.text, margin: "0 0 4px", letterSpacing: "-0.5px" }}>Ofertas recebidas</h1>
-        <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: 0 }}>
-          <strong style={{ color: T.primary }}>{pending.length}</strong> oferta{pending.length !== 1 ? "s" : ""} para o seu anúncio · iPhone 15 Pro Max 256GB
-        </p>
+    <div className={estilos.pagina}>
+      <Link to="/meus-anuncios" className={negociacaoEstilos.meta}>
+        ← Meus anúncios
+      </Link>
+      <div className={estilos.topo}>
+        <div>
+          <h1>Ofertas recebidas</h1>
+          <span className={estilos.resumo}>
+            {anuncio.data.titulo}
+            {ofertas.isSuccess && ` · ${fmtPlural(lista.length, "oferta ativa", "ofertas ativas")}`}
+          </span>
+        </div>
+        {lista.length > 1 && (
+          <Campo
+            como="select"
+            rotulo="Ordenar por"
+            value={ordem}
+            onChange={(evento) => setOrdem(evento.target.value as Ordem)}
+          >
+            {ORDENS.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item.rotulo}
+              </option>
+            ))}
+          </Campo>
+        )}
       </div>
 
-      {pending.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-          <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 18, color: T.text }}>Nenhuma oferta ativa</div>
-          <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid }}>Aguarde novas ofertas ou edite seu anúncio para atrair mais vendedores.</p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {pending.map(offer => {
-            const cc = COND_COLOR[offer.condition] ?? T.textLight;
-            return (
-              <div key={offer.id} style={{ backgroundColor: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
-                <div style={{ display: "flex", gap: 0 }}>
-                  {/* Product image */}
-                  <div style={{ width: 160, flexShrink: 0, backgroundColor: T.bgMuted }}>
-                    <img src={offer.image} alt={offer.title} style={{ width: "100%", height: "100%", objectFit: "cover", minHeight: 140, display: "block" }} />
-                  </div>
+      <EstimativaDePreco anuncioId={id} />
 
-                  {/* Content */}
-                  <div style={{ flex: 1, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    {/* Top row */}
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                      <div>
-                        <div style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 16, color: T.text, marginBottom: 4 }}>{offer.title}</div>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 10, backgroundColor: comAlfa(cc, 0.09), color: cc, fontSize: 11, fontFamily: T.font.display, fontWeight: 600 }}>
-                          {offer.condition}
-                        </span>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontFamily: T.font.display, fontWeight: 800, fontSize: 22, color: T.primary }}>{fmtPrice(offer.price)}</div>
-                        <div style={{ fontFamily: T.font.body, fontSize: 11, color: T.textLight }}>{offer.sentAt}</div>
-                      </div>
-                    </div>
+      {ofertas.isPending && <Carregando rotulo="Carregando ofertas…" />}
+      {ofertas.isError && <ErroAoCarregar erro={ofertas.error} aoTentarDeNovo={() => ofertas.refetch()} />}
 
-                    {/* Description */}
-                    <p style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid, margin: 0, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                      {offer.description}
-                    </p>
+      {ofertas.isSuccess && lista.length === 0 && (
+        <EstadoVazio
+          icone="📭"
+          titulo="Nenhuma oferta ativa"
+          descricao="Quando vendedores da região responderem, as ofertas aparecem aqui. Ofertas retiradas ou recusadas saem da lista."
+          acao={{ rotulo: "Ver o anúncio", para: `/anuncios/${id}` }}
+        />
+      )}
 
-                    {offer.observations && (
-                      <div style={{ padding: "8px 12px", backgroundColor: T.bgMuted, borderRadius: 8, fontFamily: T.font.body, fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>
-                        💬 <em>{offer.observations}</em>
-                      </div>
-                    )}
+      {comparadas.length >= 2 && (
+        <section className={negociacaoEstilos.secao} aria-label="Comparação de ofertas">
+          <h2>Comparando {comparadas.length} ofertas</h2>
+          <div className={negociacaoEstilos.tabelaRolavel}>
+            <table className={negociacaoEstilos.tabela}>
+              <thead>
+                <tr>
+                  <th scope="col">Atributo</th>
+                  {comparadas.map((oferta) => (
+                    <th key={oferta.id} scope="col">
+                      {tituloDaOferta(oferta)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ATRIBUTOS.map((atributo) => (
+                  <tr key={atributo.rotulo}>
+                    <th scope="row">{atributo.rotulo}</th>
+                    {comparadas.map((oferta) => (
+                      <td key={oferta.id}>{atributo.valor(oferta)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className={negociacaoEstilos.acoes}>
+            <Botao variante="texto" onClick={() => setSelecionadas([])}>
+              Limpar comparação
+            </Botao>
+          </div>
+        </section>
+      )}
+      {comparadas.length === 1 && (
+        <p className={negociacaoEstilos.meta} role="status">
+          Selecione mais uma oferta para comparar lado a lado.
+        </p>
+      )}
 
-                    {/* Seller + meta */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Avatar initials={offer.seller.initials} color={offer.seller.color} size={30} />
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 13, color: T.text }}>{offer.seller.name}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <IStar size={11} />
-                          <span style={{ fontFamily: T.font.body, fontSize: 11, color: T.textMid }}>{offer.seller.rating.toFixed(1)}</span>
-                          <span style={{ fontFamily: T.font.body, fontSize: 11, color: T.textLight }}>· <IPin size={10} color={T.textLight} /> {offer.distance} km · {offer.location.split(",")[0]}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div style={{ display: "flex", gap: 8, paddingTop: 8, borderTop: `1px solid ${T.border}`, flexWrap: "wrap" }}>
-                      <button onClick={() => accept(offer.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", backgroundColor: T.success, color: "#fff", border: "none", borderRadius: 8, fontFamily: T.font.display, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                        <ICheck size={14} />Aceitar
-                      </button>
-                      <Link to={`/anuncios/10/ofertas/${offer.id}/contraproposta`}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", backgroundColor: T.pLight, color: T.primary, border: `1.5px solid ${T.pBorder}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
-                        💱 Contraproposta
-                      </Link>
-                      <Link to="/negociacoes/chat1"
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", backgroundColor: T.infoBg, color: T.info, border: `1.5px solid ${comAlfa(T.info, 0.19)}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 600, fontSize: 13, textDecoration: "none" }}>
-                        <IMessageCircle size={14} color={T.info} />Conversar
-                      </Link>
-                      <button onClick={() => reject(offer.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", backgroundColor: "#fff", color: T.textMid, border: `1.5px solid ${T.border}`, borderRadius: 8, fontFamily: T.font.display, fontWeight: 600, fontSize: 13, cursor: "pointer", marginLeft: "auto" }}>
-                        <IX size={13} />Recusar
-                      </button>
-                    </div>
-                  </div>
+      {lista.length > 0 && (
+        <ul className={estilos.lista}>
+          {lista.map((oferta) => (
+            <li key={oferta.id} className={estilos.item}>
+              {oferta.produtoFoto && (
+                <img className={negociacaoEstilos.miniatura} src={oferta.produtoFoto} alt={tituloDaOferta(oferta)} />
+              )}
+              <div className={estilos.info}>
+                <div className={estilos.linhaTitulo}>
+                  <h2>{tituloDaOferta(oferta)}</h2>
+                  <Badge tom={TOM_DA_OFERTA[oferta.status]}>{ROTULO_DA_OFERTA[oferta.status]}</Badge>
+                  {ofertaFoiEditada(oferta) && <Badge tom="aviso">Valor alterado</Badge>}
                 </div>
+                <p className={estilos.detalhes}>
+                  <span className={estilos.preco}>{fmtPrecoExato(oferta.preco)}</span>
+                  <span>{rotuloDaConservacao(oferta.estadoDeConservacao)}</span>
+                  {oferta.vendedorNome && <span>{oferta.vendedorNome}</span>}
+                  <span>Enviada em {fmtDataHora(oferta.criadaEm)}</span>
+                </p>
               </div>
-            );
-          })}
+              <div className={estilos.acoes}>
+                <label className={negociacaoEstilos.linha}>
+                  <input
+                    type="checkbox"
+                    checked={selecionadas.includes(oferta.id)}
+                    onChange={() => alternar(oferta.id)}
+                    aria-label={`Comparar ${tituloDaOferta(oferta)}`}
+                  />
+                  Comparar
+                </label>
+                <Botao para={`/negociacoes/${oferta.id}`} tamanho="pequeno">
+                  Abrir negociação
+                </Botao>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {ofertas.hasNextPage && (
+        <div className={estilos.carregarMais}>
+          <Botao variante="secundario" carregando={ofertas.isFetchingNextPage} onClick={() => ofertas.fetchNextPage()}>
+            Carregar mais
+          </Botao>
         </div>
       )}
     </div>

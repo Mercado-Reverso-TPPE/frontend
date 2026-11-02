@@ -1,86 +1,274 @@
-import { useState, type ReactElement } from "react";
-import { Link } from "react-router";
-import { NOTIFICATIONS, Notification } from "@/dados/demo";
-import { T } from "@/estilos/tokens";
-import { IBell, IMessageCircle, ICheck, IX, IStar, IPackage } from "@/componentes/icones";
+import { useEffect, useState } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router";
+import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
+import {
+  CANAIS,
+  destinoDaNotificacao,
+  listarNotificacoes,
+  marcarComoLida,
+  obterPreferencias,
+  rotuloDoTipo,
+  salvarPreferencias,
+  TIPO_OBRIGATORIO,
+  TIPOS_DE_NOTIFICACAO,
+  type Notificacao,
+  type Preferencia,
+} from "@/api/notificacoes";
+import { Badge, Botao, Chip } from "@/componentes/base";
+import { Aviso, Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
+import negociacaoEstilos from "@/componentes/negociacao/Negociacao.module.css";
+import { fmtDataHora, fmtPlural } from "@/utils/formato";
+import estilos from "@/paginas/MeusAnuncios/MeusAnuncios.module.css";
 
-const TYPE_META: Record<Notification["type"], { icon: ReactElement; color: string; bg: string }> = {
-  offer:     { icon: <IPackage size={16} color="#D97338" />, color: T.primary, bg: T.pLight },
-  counter:   { icon: <span style={{ fontSize: 14 }}>💱</span>, color: "#5856D6", bg: "#F0EEFF" },
-  message:   { icon: <IMessageCircle size={16} color={T.info} />, color: T.info, bg: T.infoBg },
-  accepted:  { icon: <ICheck size={16} color={T.success} />, color: T.success, bg: T.successBg },
-  rejected:  { icon: <IX size={16} color={T.error} />, color: T.error, bg: T.errorBg },
-  concluded: { icon: <span style={{ fontSize: 14 }}>🤝</span>, color: "#5856D6", bg: "#F0EEFF" },
-  review:    { icon: <IStar size={16} color="#FFD60A" />, color: "#B8960A", bg: "#FFFAE0" },
-};
-
+/** Central de notificações e preferências de canal (QRO-17). */
 export default function Notificacoes() {
-  const [items, setItems] = useState(NOTIFICATIONS);
-
-  const markAll = () => setItems(ns => ns.map(n => ({ ...n, read: true })));
-  const markOne = (id: string) => setItems(ns => ns.map(n => n.id === id ? { ...n, read: true } : n));
-  const unread = items.filter(n => !n.read).length;
+  const [busca, setBusca] = useSearchParams();
+  const aba = busca.get("aba") === "preferencias" ? "preferencias" : "central";
 
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto", padding: "40px 28px 60px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 28, color: T.text, margin: "0 0 4px", letterSpacing: "-0.5px" }}>Notificações</h1>
-          {unread > 0 && <span style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid }}>{unread} não {unread === 1 ? "lida" : "lidas"}</span>}
+    <div className={estilos.pagina}>
+      <div className={estilos.topo}>
+        <h1>Notificações</h1>
+        <div className={estilos.acoes} role="group" aria-label="Seções">
+          <Chip ativo={aba === "central"} onClick={() => setBusca({}, { replace: true })}>
+            Central
+          </Chip>
+          <Chip ativo={aba === "preferencias"} onClick={() => setBusca({ aba: "preferencias" }, { replace: true })}>
+            Preferências
+          </Chip>
         </div>
-        {unread > 0 && (
-          <button onClick={markAll} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: T.font.display, fontWeight: 600, fontSize: 13, color: T.primary, padding: 0 }}>
-            Marcar todas como lidas
-          </button>
-        )}
       </div>
+      {aba === "central" ? <Central /> : <Preferencias />}
+    </div>
+  );
+}
 
-      {items.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <IBell size={40} color={T.border} />
-          <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 16, color: T.text, marginTop: 12 }}>Sem notificações</div>
-          <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid }}>Você está em dia!</p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {items.map(n => {
-            const meta = TYPE_META[n.type];
-            return (
-              <Link
-                key={n.id}
-                to={n.link}
-                onClick={() => markOne(n.id)}
-                style={{
-                  display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 20px",
-                  backgroundColor: n.read ? "#fff" : "#FDFAF7",
-                  border: `1.5px solid ${n.read ? T.border : T.pBorder}`,
-                  borderRadius: 12, textDecoration: "none", transition: "all .12s",
-                  position: "relative",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = T.primary)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = n.read ? T.border : T.pBorder)}
-              >
-                {/* Icon */}
-                <div style={{ width: 40, height: 40, borderRadius: "50%", backgroundColor: meta.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {meta.icon}
-                </div>
+function Central() {
+  const navegar = useNavigate();
+  const clienteDeConsulta = useQueryClient();
+  const [erro, setErro] = useState<string>();
 
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.text, marginBottom: 3 }}>{n.title}</div>
-                  <div style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid, lineHeight: 1.5 }}>{n.body}</div>
-                  <div style={{ fontFamily: T.font.body, fontSize: 11, color: T.textLight, marginTop: 6 }}>{n.at}</div>
-                </div>
+  const notificacoes = useInfiniteQuery({
+    queryKey: ["notificacoes", "lista"],
+    queryFn: ({ pageParam }) => listarNotificacoes(pageParam),
+    initialPageParam: "1" as string | null,
+    getNextPageParam: (pagina) => pagina.proximo,
+  });
 
-                {/* Unread dot */}
-                {!n.read && (
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: T.primary, flexShrink: 0, marginTop: 6 }} />
-                )}
-              </Link>
-            );
-          })}
+  const atualizar = () => clienteDeConsulta.invalidateQueries({ queryKey: ["notificacoes"] });
+
+  const marcar = useMutation({
+    mutationFn: (ids: string[]) => Promise.all(ids.map(marcarComoLida)),
+    onError: (falha) => setErro(falha instanceof ErroDeApi ? falha.message : "Não foi possível marcar como lida."),
+    onSettled: atualizar,
+  });
+
+  const lista = notificacoes.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const naoLidas = lista.filter((notificacao) => !notificacao.lidaEm);
+
+  const abrir = async (notificacao: Notificacao) => {
+    if (!notificacao.lidaEm) {
+      try {
+        await marcarComoLida(notificacao.id);
+        void atualizar();
+      } catch {
+        // Abrir o destino importa mais que a marcação; ela é refeita na próxima visita.
+      }
+    }
+    const destino = destinoDaNotificacao(notificacao);
+    if (destino) navegar(destino);
+  };
+
+  return (
+    <>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {notificacoes.isPending && <Carregando rotulo="Carregando notificações…" />}
+      {notificacoes.isError && (
+        <ErroAoCarregar erro={notificacoes.error} aoTentarDeNovo={() => notificacoes.refetch()} />
+      )}
+
+      {notificacoes.isSuccess && lista.length === 0 && (
+        <EstadoVazio
+          icone="🔔"
+          titulo="Nenhuma notificação por aqui"
+          descricao="Ofertas, contrapropostas, mensagens e conclusões das suas negociações aparecem aqui."
+          acao={{ rotulo: "Explorar anúncios", para: "/" }}
+        />
+      )}
+
+      {lista.length > 0 && (
+        <div className={estilos.topo}>
+          <span className={estilos.resumo} role="status">
+            {naoLidas.length ? fmtPlural(naoLidas.length, "não lida", "não lidas") : "Tudo lido"}
+          </span>
+          {naoLidas.length > 0 && (
+            <Botao
+              variante="texto"
+              tamanho="pequeno"
+              carregando={marcar.isPending}
+              onClick={() => marcar.mutate(naoLidas.map((notificacao) => notificacao.id))}
+            >
+              Marcar todas como lidas
+            </Botao>
+          )}
         </div>
       )}
-    </div>
+
+      {lista.length > 0 && (
+        <ul className={estilos.lista} aria-label="Notificações">
+          {lista.map((notificacao) => {
+            const destino = destinoDaNotificacao(notificacao);
+            return (
+              <li key={notificacao.id} className={estilos.item}>
+                <div className={estilos.info}>
+                  <div className={estilos.linhaTitulo}>
+                    <h2>{notificacao.titulo}</h2>
+                    {!notificacao.lidaEm && <Badge tom="marca">Não lida</Badge>}
+                  </div>
+                  <p className={negociacaoEstilos.texto}>{notificacao.mensagem}</p>
+                  <p className={estilos.detalhes}>
+                    <span>{rotuloDoTipo(notificacao.tipo)}</span>
+                    <span>{fmtDataHora(notificacao.criadaEm)}</span>
+                  </p>
+                </div>
+                <div className={estilos.acoes}>
+                  {destino && (
+                    <Botao tamanho="pequeno" variante="secundario" onClick={() => void abrir(notificacao)}>
+                      Abrir
+                    </Botao>
+                  )}
+                  {!notificacao.lidaEm && (
+                    <Botao
+                      tamanho="pequeno"
+                      variante="texto"
+                      onClick={() => marcar.mutate([notificacao.id])}
+                      aria-label={`Marcar “${notificacao.titulo}” como lida`}
+                    >
+                      Marcar como lida
+                    </Botao>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {notificacoes.hasNextPage && (
+        <div className={estilos.carregarMais}>
+          <Botao
+            variante="secundario"
+            carregando={notificacoes.isFetchingNextPage}
+            onClick={() => notificacoes.fetchNextPage()}
+          >
+            Carregar mais
+          </Botao>
+        </div>
+      )}
+    </>
+  );
+}
+
+const chave = (preferencia: Pick<Preferencia, "tipo" | "canal">) => `${preferencia.tipo}:${preferencia.canal}`;
+
+function Preferencias() {
+  const clienteDeConsulta = useQueryClient();
+  const preferencias = useQuery({ queryKey: ["notificacoes", "preferencias"], queryFn: obterPreferencias });
+  const [marcadas, setMarcadas] = useState<Record<string, boolean>>({});
+  const [resultado, setResultado] = useState<{ tom: "sucesso" | "erro"; texto: string }>();
+
+  useEffect(() => {
+    if (preferencias.data) {
+      setMarcadas(Object.fromEntries(preferencias.data.map((item) => [chave(item), item.habilitada])));
+    }
+  }, [preferencias.data]);
+
+  const salvar = useMutation({
+    mutationFn: () =>
+      salvarPreferencias(
+        (preferencias.data ?? [])
+          .filter((item) => item.tipo !== TIPO_OBRIGATORIO)
+          .map((item) => ({ ...item, habilitada: marcadas[chave(item)] ?? item.habilitada })),
+      ),
+    onSuccess: (salvas) => {
+      clienteDeConsulta.setQueryData(["notificacoes", "preferencias"], salvas);
+      setResultado({ tom: "sucesso", texto: "Preferências salvas." });
+    },
+    onError: (falha) => {
+      const { geral } = errosDeValidacao(falha);
+      setResultado({
+        tom: "erro",
+        texto: geral ?? (falha instanceof ErroDeApi ? falha.message : "Não foi possível salvar."),
+      });
+    },
+  });
+
+  if (preferencias.isPending) return <Carregando rotulo="Carregando preferências…" />;
+  if (preferencias.isError) {
+    return <ErroAoCarregar erro={preferencias.error} aoTentarDeNovo={() => preferencias.refetch()} />;
+  }
+
+  return (
+    <form
+      className={negociacaoEstilos.secao}
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        setResultado(undefined);
+        salvar.mutate();
+      }}
+      aria-label="Preferências de notificação"
+    >
+      <h2>O que você quer receber</h2>
+      <p className={negociacaoEstilos.texto}>
+        Escolha os avisos e os canais. Os avisos de segurança da conta não podem ser desligados.
+      </p>
+      {resultado && <Aviso tom={resultado.tom}>{resultado.texto}</Aviso>}
+      <div className={negociacaoEstilos.tabelaRolavel}>
+        <table className={negociacaoEstilos.tabela}>
+          <thead>
+            <tr>
+              <th scope="col">Aviso</th>
+              {CANAIS.map((canal) => (
+                <th key={canal.canal} scope="col">
+                  {canal.rotulo}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {TIPOS_DE_NOTIFICACAO.map(({ tipo, rotulo }) => (
+              <tr key={tipo}>
+                <th scope="row">{rotulo}</th>
+                {CANAIS.map((canal) => {
+                  const obrigatorio = tipo === TIPO_OBRIGATORIO;
+                  return (
+                    <td key={canal.canal}>
+                      <input
+                        type="checkbox"
+                        aria-label={`${rotulo} ${canal.rotulo.toLowerCase()}`}
+                        checked={obrigatorio || (marcadas[chave({ tipo, canal: canal.canal })] ?? true)}
+                        disabled={obrigatorio}
+                        onChange={(evento) =>
+                          setMarcadas((atuais) => ({
+                            ...atuais,
+                            [chave({ tipo, canal: canal.canal })]: evento.target.checked,
+                          }))
+                        }
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className={negociacaoEstilos.acoes}>
+        <Botao type="submit" carregando={salvar.isPending}>
+          Salvar preferências
+        </Botao>
+      </div>
+    </form>
   );
 }

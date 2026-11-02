@@ -50,6 +50,7 @@ describe("enviar oferta", () => {
     const chamadas = simularApi({
       "GET /anuncios/a1": () => ({ corpo: anuncio() }),
       "GET /anuncios/a1/ofertas": () => ({ corpo: { next: null, results: enviada ? [enviada] : [] } }),
+      "GET /produtos": () => ({ corpo: { next: null, results: [] } }),
       "POST /anuncios/a1/ofertas": (corpo) => {
         enviada = oferta(corpo as Record<string, unknown>);
         return { status: 201, corpo: enviada };
@@ -62,7 +63,7 @@ describe("enviar oferta", () => {
     // Nada das concorrentes: nem a contagem de ofertas do anúncio aparece.
     expect(screen.queryByText(/4 ofertas/)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Enviar oferta" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Enviar oferta" }));
     expect(screen.getByText("Descreva o produto que você está oferecendo.")).toBeInTheDocument();
     expect(screen.getByText("Escolha o estado de conservação.")).toBeInTheDocument();
     expect(screen.getByText("Informe o preço.")).toBeInTheDocument();

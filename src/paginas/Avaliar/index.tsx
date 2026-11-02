@@ -1,104 +1,139 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { MOCK_OFFERS } from "@/dados/demo";
-import { T } from "@/estilos/tokens";
-import { IStar, IArrowLeft, ICheck } from "@/componentes/icones";
+import { useState, type FormEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useParams } from "react-router";
+import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
+import { avaliarNegociacao, COMENTARIO_MAXIMO } from "@/api/negociacoes";
+import { Botao, Campo } from "@/componentes/base";
+import { Aviso, Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
+import negociacaoEstilos from "@/componentes/negociacao/Negociacao.module.css";
+import { useNegociacaoDaOferta } from "@/hooks/useNegociacao";
+import { fmtPrecoExato } from "@/utils/formato";
+import estilos from "@/paginas/OfertarProduto/Ofertar.module.css";
 
+const NOTAS = [
+  { nota: 1, rotulo: "Péssima" },
+  { nota: 2, rotulo: "Ruim" },
+  { nota: 3, rotulo: "Regular" },
+  { nota: 4, rotulo: "Boa" },
+  { nota: 5, rotulo: "Ótima" },
+];
+
+/**
+ * Avaliação da contraparte (QRO-18): nota de 1 a 5 e comentário opcional,
+ * uma vez por negociação concluída. A avaliação fica oculta até as duas
+ * partes avaliarem ou o prazo acabar, e não pode ser editada depois.
+ */
 export default function Avaliar() {
-  const navigate = useNavigate();
-  const offer = MOCK_OFFERS[0];
-  const seller = offer.seller;
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const { id = "" } = useParams();
+  const clienteDeConsulta = useQueryClient();
+  const { carregando, erro, naoEncontrada, negociacao, recarregar } = useNegociacaoDaOferta(id);
+  const [nota, setNota] = useState<number>();
+  const [comentario, setComentario] = useState("");
+  const [erroDaNota, setErroDaNota] = useState<string>();
+  const [erroGeral, setErroGeral] = useState<string>();
 
-  const LABELS = ["", "Muito ruim", "Ruim", "Regular", "Bom", "Excelente!"];
+  const avaliar = useMutation({
+    mutationFn: ({ negociacaoId, valor }: { negociacaoId: string; valor: number }) =>
+      avaliarNegociacao(negociacaoId, valor, comentario),
+    onSuccess: () => clienteDeConsulta.invalidateQueries({ queryKey: ["historico"] }),
+    onError: (falha) => {
+      const { campos, geral } = errosDeValidacao(falha);
+      if (campos.nota) setErroDaNota(campos.nota);
+      setErroGeral(geral ?? campos.comentario ?? (falha instanceof ErroDeApi ? falha.message : "Não foi possível avaliar."));
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rating) return;
-    setSubmitting(true);
-    setTimeout(() => { setSubmitting(false); setDone(true); }, 900);
+  const enviar = (evento: FormEvent) => {
+    evento.preventDefault();
+    if (!negociacao) return;
+    if (!nota) return setErroDaNota("Escolha uma nota de 1 a 5.");
+    setErroDaNota(undefined);
+    setErroGeral(undefined);
+    avaliar.mutate({ negociacaoId: negociacao.id, valor: nota });
   };
 
-  if (done) {
-    return (
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "80px 28px", textAlign: "center" }}>
-        <div style={{ width: 80, height: 80, backgroundColor: "#FFFAE0", border: "1px solid #F5E066", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-          <span style={{ fontSize: 40 }}>⭐</span>
-        </div>
-        <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 26, color: T.text, margin: "0 0 10px" }}>Avaliação enviada!</h1>
-        <p style={{ fontFamily: T.font.body, fontSize: 15, color: T.textMid, margin: "0 0 28px", lineHeight: 1.6 }}>
-          Obrigado por avaliar <strong>{seller.name}</strong>. Isso ajuda a comunidade a confiar mais nas negociações.
-        </p>
-        <button onClick={() => navigate("/")} style={{ padding: "12px 28px", backgroundColor: T.primary, color: "#fff", border: "none", borderRadius: 10, fontFamily: T.font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-          Voltar ao início
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "40px 28px 60px" }}>
-      <button onClick={() => navigate(-1)} style={{ display: "flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.textMid, padding: 0, marginBottom: 28 }}>
-        <IArrowLeft size={16} />Voltar
-      </button>
+    <div className={estilos.pagina}>
+      <Link to="/historico" className={estilos.voltar}>
+        ← Histórico
+      </Link>
+      <h1 className={estilos.titulo}>Avaliar negociação</h1>
 
-      <h1 style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 26, color: T.text, margin: "0 0 6px", letterSpacing: "-0.5px" }}>Avaliar negociação</h1>
-      <p style={{ fontFamily: T.font.body, fontSize: 14, color: T.textMid, margin: "0 0 28px" }}>Como foi sua experiência com este vendedor?</p>
+      {carregando && <Carregando rotulo="Carregando negociação…" />}
+      {!carregando && erro && <ErroAoCarregar erro={erro} aoTentarDeNovo={() => recarregar()} />}
+      {naoEncontrada && (
+        <EstadoVazio
+          icone="⭐"
+          titulo="Nada para avaliar aqui"
+          descricao="A avaliação abre quando a negociação é concluída. Suas negociações encerradas ficam no histórico."
+          acao={{ rotulo: "Ver histórico", para: "/historico" }}
+        />
+      )}
 
-      {/* Person */}
-      <div style={{ display: "flex", gap: 14, padding: "18px", backgroundColor: T.bgMuted, borderRadius: 12, border: `1px solid ${T.border}`, marginBottom: 28, alignItems: "center" }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", backgroundColor: seller.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 18, color: "#fff" }}>{seller.initials}</span>
-        </div>
-        <div>
-          <div style={{ fontFamily: T.font.display, fontWeight: 700, fontSize: 16, color: T.text }}>{seller.name}</div>
-          <div style={{ fontFamily: T.font.body, fontSize: 13, color: T.textMid }}>{offer.title}</div>
-        </div>
-      </div>
+      {negociacao && (
+        <section className={estilos.cartao} aria-label="Negociação">
+          <span className={estilos.rotulo}>{negociacao.anuncio.titulo}</span>
+          <h2>{negociacao.contraparte.nome}</h2>
+          <p className={estilos.detalhes}>
+            <span className={estilos.preco}>{fmtPrecoExato(negociacao.valorFinal)}</span>
+            <span>{negociacao.papel === "comprador" ? "Você comprou" : "Você vendeu"}</span>
+          </p>
+        </section>
+      )}
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        {/* Star rating */}
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.text, marginBottom: 16 }}>Nota geral</div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 10 }}>
-            {[1,2,3,4,5].map(n => (
-              <button key={n} type="button"
-                onMouseEnter={() => setHoverRating(n)}
-                onMouseLeave={() => setHoverRating(0)}
-                onClick={() => setRating(n)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, transform: n <= (hoverRating || rating) ? "scale(1.15)" : "scale(1)", transition: "transform .1s" }}>
-                <IStar size={40} color="#FFD60A" filled={n <= (hoverRating || rating)} />
-              </button>
+      {negociacao && (avaliar.isSuccess || negociacao.avaliacao.enviada) && (
+        <Aviso tom="sucesso" titulo={avaliar.isSuccess ? "Avaliação enviada" : "Você já avaliou esta negociação"}>
+          Ela fica oculta até {negociacao.contraparte.nome} avaliar também ou o prazo acabar; então as duas são
+          publicadas ao mesmo tempo. Avaliações não podem ser editadas.
+        </Aviso>
+      )}
+
+      {negociacao && !negociacao.avaliacao.disponivel && !negociacao.avaliacao.enviada && !avaliar.isSuccess && (
+        <Aviso tom="erro" titulo="Avaliação indisponível">
+          Só é possível avaliar depois que a negociação é concluída.
+        </Aviso>
+      )}
+
+      {negociacao && negociacao.avaliacao.disponivel && !avaliar.isSuccess && (
+        <form className={estilos.cartao} noValidate onSubmit={enviar} aria-label="Avaliação">
+          {erroGeral && <Aviso tom="erro">{erroGeral}</Aviso>}
+          <fieldset className={negociacaoEstilos.estrelas} aria-describedby={erroDaNota ? "erro-da-nota" : undefined}>
+            <legend>Como foi negociar com {negociacao.contraparte.nome}?</legend>
+            {NOTAS.map((item) => (
+              <label key={item.nota} className={negociacaoEstilos.estrela}>
+                <input
+                  type="radio"
+                  name="nota"
+                  value={item.nota}
+                  checked={nota === item.nota}
+                  onChange={() => setNota(item.nota)}
+                />
+                <span aria-hidden="true">{"★".repeat(item.nota)}</span>
+                {item.nota} – {item.rotulo}
+              </label>
             ))}
-          </div>
-          {(hoverRating || rating) > 0 && (
-            <div style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 15, color: "#B8960A" }}>
-              {LABELS[hoverRating || rating]}
-            </div>
+          </fieldset>
+          {erroDaNota && (
+            <p id="erro-da-nota" role="alert" className={negociacaoEstilos.meta}>
+              ⚠ {erroDaNota}
+            </p>
           )}
-        </div>
-
-        {/* Comment */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <label style={{ fontFamily: T.font.display, fontWeight: 600, fontSize: 14, color: T.text }}>Comentário (opcional)</label>
-          <textarea value={comment} onChange={e => setComment(e.target.value)}
-            placeholder="Conte como foi a experiência: pontualidade, comunicação, estado do produto..."
-            rows={4} style={{ padding: "12px 14px", border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'Inter',sans-serif", color: T.text, width: "100%", boxSizing: "border-box", outline: "none", resize: "vertical", lineHeight: 1.6 }}
-            onFocus={e => (e.target.style.borderColor = T.primary)}
-            onBlur={e => (e.target.style.borderColor = T.border)}
+          <Campo
+            como="textarea"
+            rotulo="Comentário (opcional)"
+            dica="Fica público junto da nota. Não é possível editar depois de enviar."
+            linhas={4}
+            maxLength={COMENTARIO_MAXIMO}
+            value={comentario}
+            onChange={(evento) => setComentario(evento.target.value)}
           />
-          <span style={{ fontFamily: T.font.body, fontSize: 11, color: T.textLight }}>Sua avaliação ficará visível no perfil do vendedor.</span>
-        </div>
-
-        <button type="submit" disabled={!rating || submitting}
-          style={{ padding: "14px", background: rating ? "linear-gradient(135deg,#E8803F,#D97338)" : T.bgMuted, color: rating ? "#fff" : T.textLight, border: "none", borderRadius: 12, fontFamily: T.font.display, fontWeight: 700, fontSize: 16, cursor: rating && !submitting ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {submitting ? "Enviando..." : <><ICheck size={16} />Enviar avaliação</>}
-        </button>
-      </form>
+          <div className={estilos.acoes}>
+            <Botao type="submit" carregando={avaliar.isPending}>
+              Enviar avaliação
+            </Botao>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

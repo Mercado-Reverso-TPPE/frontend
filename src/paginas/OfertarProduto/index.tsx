@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
+import { listarProdutos } from "@/api/catalogo";
 import { obterAnuncio } from "@/api/anuncios";
 import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
 import type { Anuncio } from "@/api/meusAnuncios";
@@ -41,8 +42,17 @@ export default function OfertarProduto() {
   const [confirmandoRetirada, setConfirmandoRetirada] = useState(false);
   const [aviso, setAviso] = useState<{ tom: "sucesso" | "erro"; texto: string }>();
 
+  const [busca] = useSearchParams();
   const anuncio = useQuery({ queryKey: ["anuncio", id], queryFn: () => obterAnuncio(id) });
   const minhaOferta = useQuery({ queryKey: ["ofertas", "no-anuncio", id], queryFn: () => minhaOfertaNoAnuncio(id) });
+  // Só os disponíveis: reservado ou vendido não pode entrar em oferta nova.
+  const produtos = useQuery({
+    queryKey: ["produtos", "disponivel"],
+    queryFn: () => listarProdutos({ status: "disponivel" }),
+    enabled: minhaOferta.isSuccess && minhaOferta.data === null,
+  });
+  const precoDoPalpite = Number(busca.get("preco"));
+  const precoSugerido = Number.isFinite(precoDoPalpite) && precoDoPalpite > 0 ? precoDoPalpite : null;
 
   const atualizar = () => clienteDeConsulta.invalidateQueries({ queryKey: ["ofertas"] });
 
@@ -149,6 +159,11 @@ export default function OfertarProduto() {
               ) : (
                 <Aviso tom="sucesso">{motivoDoBloqueio(oferta.status)}</Aviso>
               )}
+              <div className={estilos.acoes}>
+                <Botao variante="suave" para={`/negociacoes/${oferta.id}`}>
+                  Abrir negociação e conversa
+                </Botao>
+              </div>
             </>
           )}
         </section>
@@ -158,8 +173,12 @@ export default function OfertarProduto() {
         </Aviso>
       ) : (
         <section className={estilos.cartao} aria-label="Nova oferta">
+          {produtos.isPending && <Carregando rotulo="Carregando sua loja…" />}
+          {!produtos.isPending && (
           <FormularioDeOferta
             rotuloDoEnvio="Enviar oferta"
+            produtos={produtos.data?.itens ?? []}
+            precoSugerido={precoSugerido}
             aoEnviar={async (dados) => {
               await enviarOferta(id, dados);
               await atualizar();
@@ -169,8 +188,9 @@ export default function OfertarProduto() {
               });
             }}
           />
+          )}
           <p className={estilos.dica}>
-            Só o comprador vê sua oferta. Para incluir fotos, oferte um produto da sua loja.
+            Só o comprador vê sua oferta. Para incluir fotos, oferte um produto da <Link to="/minha-loja">sua loja</Link>.
           </p>
         </section>
       )}
