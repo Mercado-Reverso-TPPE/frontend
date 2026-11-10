@@ -109,6 +109,8 @@
   --gradiente-marca: linear-gradient(135deg, #E8803F, #D97338);
   --gradiente-faixa: linear-gradient(135deg, #D97338 0%, #C4622B 100%);
   --gradiente-hero: linear-gradient(135deg, #FDF3EC 0%, #FEF8F5 60%, #FFFFFF 100%);
+  --gradiente-destaque: linear-gradient(90deg, #D97338, #F59A5B);
+  --gradiente-destaque-vertical: linear-gradient(180deg, #D97338, #F59A5B);
   --borda-hero: #F0E4D8;
 
   /* ── Movimento e foco ──────────────────────────────────── */

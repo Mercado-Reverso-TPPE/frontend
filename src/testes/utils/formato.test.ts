@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { fmtCompacto, fmtDistancia, fmtNumero, fmtPlural, fmtPrice, fmtRange } from "@/utils/formato";
+import {
+  fmtCompacto,
+  fmtDistancia,
+  fmtNota,
+  fmtNumero,
+  fmtPlural,
+  fmtPrice,
+  fmtRange,
+  fmtTempoRelativo,
+} from "@/utils/formato";
 
 describe("formatação", () => {
   it("valor em reais, sem centavos", () => {
@@ -23,5 +32,21 @@ describe("formatação", () => {
     expect(fmtPlural(1, "oferta")).toBe("1 oferta");
     expect(fmtPlural(7, "oferta")).toBe("7 ofertas");
     expect(fmtPlural(2, "resultado")).toBe("2 resultados");
+  });
+
+  it("tempo relativo da publicação", () => {
+    const agora = Date.UTC(2026, 10, 10, 12, 0);
+    const antes = (minutos: number) => new Date(agora - minutos * 60000).toISOString();
+    expect(fmtTempoRelativo(antes(0), agora)).toBe("agora");
+    expect(fmtTempoRelativo(antes(12), agora)).toBe("12 min");
+    expect(fmtTempoRelativo(antes(60), agora)).toBe("1 hora");
+    expect(fmtTempoRelativo(antes(180), agora)).toBe("3 horas");
+    expect(fmtTempoRelativo(antes(2 * 1440), agora)).toBe("2 dias");
+    expect(fmtTempoRelativo(antes(40 * 1440), agora)).toBe("01/10/2026");
+  });
+
+  it("nota com uma casa decimal", () => {
+    expect(fmtNota(4.9)).toBe("4,9");
+    expect(fmtNota(5)).toBe("5,0");
   });
 });

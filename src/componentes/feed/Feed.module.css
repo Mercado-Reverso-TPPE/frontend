@@ -348,7 +348,7 @@
   grid-template-columns: repeat(2, minmax(140px, 180px)) auto minmax(160px, 200px);
   align-items: end;
   gap: var(--espaco-1-5);
-  padding-top: var(--espaco-1-5);
+  padding-block: var(--espaco-1) var(--espaco-1-5);
 }
 
 @media (max-width: 760px) {

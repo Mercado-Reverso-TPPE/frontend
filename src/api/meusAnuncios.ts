@@ -17,6 +17,35 @@ export interface Categoria {
   nome: string;
 }
 
+/** Resumo público de quem publica: o que o feed pode mostrar de uma pessoa. */
+export interface PessoaPublica {
+  id: string;
+  nome: string;
+  foto: string | null;
+  /** Média das avaliações; `null` enquanto não há avaliação. */
+  nota: number | null;
+  avaliacoes: number;
+}
+
+export interface PessoaDaApi {
+  id: string | number;
+  nome: string;
+  foto?: string | null;
+  nota?: string | number | null;
+  avaliacoes?: number;
+}
+
+export const pessoaDaApi = (pessoa: PessoaDaApi | null | undefined): PessoaPublica | null =>
+  pessoa
+    ? {
+        id: String(pessoa.id),
+        nome: pessoa.nome,
+        foto: pessoa.foto || null,
+        nota: pessoa.nota === null || pessoa.nota === undefined || pessoa.nota === "" ? null : Number(pessoa.nota),
+        avaliacoes: pessoa.avaliacoes ?? 0,
+      }
+    : null;
+
 /** Anúncio de "procura-se" como a API devolve, já convertido. */
 export interface Anuncio {
   id: string;
@@ -36,6 +65,8 @@ export interface Anuncio {
   criadoEm: string;
   /** Distância até a pessoa que vê; só nas buscas. */
   distanciaKm: number | null;
+  /** Resumo público do comprador; só quando a API o envia no feed. */
+  compradorPublico?: PessoaPublica | null;
 }
 
 /** Na lista "Meus anúncios" o anúncio é o mesmo; o nome deixa claro de quem é. */
@@ -90,6 +121,7 @@ export interface AnuncioDaApi {
   uf: string;
   criado_em: string;
   distancia_km?: number | null;
+  comprador_publico?: PessoaDaApi | null;
 }
 
 const numeroOuNulo = (valor: string | number | null) => (valor === null || valor === "" ? null : Number(valor));
@@ -111,6 +143,7 @@ export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
     uf: anuncio.uf ?? "",
     criadoEm: anuncio.criado_em,
     distanciaKm: anuncio.distancia_km ?? null,
+    compradorPublico: pessoaDaApi(anuncio.comprador_publico),
   };
 }
 
