@@ -8,8 +8,8 @@
  */
 
 import { api, apiConfigurada, ErroDeApi } from "./cliente";
-import { anuncioDaApi, slug, type Anuncio, type AnuncioDaApi } from "./meusAnuncios";
-import type { BuyerAd } from "./tipos";
+import { anuncioDaApi, slug, type Anuncio, type AnuncioDaApi, type PessoaPublica } from "./meusAnuncios";
+import type { BuyerAd, User } from "./tipos";
 import { ALL_ADS, MY_ADS } from "@/dados/demo";
 
 /** Ordenações aceitas pelo backend (`BuscaSalva.Ordenacao`). */
@@ -49,6 +49,30 @@ const esperar = () => new Promise((resolve) => setTimeout(resolve, ATRASO_DEMO_M
 
 const STATUS_DEMO = { active: "ativo", paused: "pausado", closed: "encerrado" } as const;
 
+/** `"12 min"`, `"1 hora"`, `"3 dias"` → minutos, para datar a demonstração. */
+function minutosAtras(tempo: string): number | null {
+  const [, quantidade, unidade] = /(\d+)\s*(min|hora|dia|semana)/.exec(tempo) ?? [];
+  if (!quantidade || !unidade) return null;
+  const fator = { min: 1, hora: 60, dia: 1440, semana: 10080 }[unidade] ?? 1;
+  return Number(quantidade) * fator;
+}
+
+/** Data de publicação da demonstração, relativa a agora. */
+export function dataDeDemo(tempo: string, indice: number) {
+  const minutos = minutosAtras(tempo);
+  if (minutos === null) return new Date(Date.UTC(2026, 9, 20 - indice)).toISOString();
+  return new Date(Date.now() - minutos * 60000).toISOString();
+}
+
+/** Resumo público de uma pessoa da demonstração. */
+export const pessoaDeDemo = (pessoa: User): PessoaPublica => ({
+  id: pessoa.id,
+  nome: pessoa.name,
+  foto: pessoa.photo ?? null,
+  nota: pessoa.rating,
+  avaliacoes: pessoa.reviews,
+});
+
 /** Converte um anúncio de demonstração no formato da API. */
 function anuncioDeDemo(anuncio: BuyerAd, indice = 0): Anuncio {
   const [cidade = "", uf = ""] = anuncio.location.split(",").map((parte) => parte.trim());
@@ -66,8 +90,9 @@ function anuncioDeDemo(anuncio: BuyerAd, indice = 0): Anuncio {
     ofertasRecebidas: anuncio.offers,
     cidade,
     uf,
-    criadoEm: new Date(Date.UTC(2026, 9, 20 - indice)).toISOString(),
+    criadoEm: dataDeDemo(anuncio.timeAgo, indice),
     distanciaKm: anuncio.distance,
+    compradorPublico: pessoaDeDemo(anuncio.buyer),
   };
 }
 

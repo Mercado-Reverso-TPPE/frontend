@@ -1,3 +1,4 @@
 export { CardCompacto } from "./CardCompacto";
 export { CardProcurando } from "./CardProcurando";
-export { faixaDoAnuncio, localDoAnuncio } from "./faixa";
+export { faixaCompactaDoAnuncio, faixaDoAnuncio, localDoAnuncio } from "./faixa";
+export { corDaPessoa, iniciaisDe, nomeCurto } from "./pessoa";
