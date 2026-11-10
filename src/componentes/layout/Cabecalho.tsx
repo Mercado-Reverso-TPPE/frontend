@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router";
+import { apiConfigurada } from "@/api/cliente";
+import { contarNaoLidas } from "@/api/notificacoes";
 import { Avatar, Botao } from "@/componentes/base";
 import { IBell, IChevronDown, IHistory, IPackage, IPlus, ISearch, IUser } from "@/componentes/icones";
 import { useFiltros } from "@/hooks/useFiltros";
 import { useSessao } from "@/hooks/useSessao";
-import { NOTIFICATIONS } from "@/dados/demo";
 import { T } from "@/estilos/tokens";
 import estilos from "./Cabecalho.module.css";
 import { Logo } from "./Logo";
@@ -26,8 +28,14 @@ export function Cabecalho() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [termo, setTermo] = useState(filtros.busca);
 
-  // Enquanto as notificações não vêm da API, a contagem usa os dados de demonstração.
-  const naoLidas = NOTIFICATIONS.filter((notificacao) => !notificacao.read).length;
+  // Contagem da API (QRO-17), atualizada de tempos em tempos enquanto há sessão.
+  const contagem = useQuery({
+    queryKey: ["notificacoes", "nao-lidas"],
+    queryFn: contarNaoLidas,
+    enabled: autenticado && apiConfigurada(),
+    refetchInterval: 60_000,
+  });
+  const naoLidas = autenticado ? (contagem.data ?? 0) : 0;
 
   const buscar = (evento: React.FormEvent) => {
     evento.preventDefault();

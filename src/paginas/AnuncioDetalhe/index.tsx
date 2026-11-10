@@ -6,6 +6,7 @@ import { acoesPermitidas } from "@/api/meusAnuncios";
 import { faixaDoAnuncio, localDoAnuncio } from "@/componentes/anuncio";
 import { Badge, Botao } from "@/componentes/base";
 import { Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
+import { EstimativaDePreco, PalpiteDePreco } from "@/componentes/negociacao/Palpites";
 import { useSessao } from "@/hooks/useSessao";
 import { ROTULO_DO_STATUS, TOM_DO_STATUS } from "@/paginas/MeusAnuncios/status";
 import { fmtData, fmtDistancia, fmtPlural } from "@/utils/formato";
@@ -121,6 +122,11 @@ export default function AnuncioDetalhe() {
             )}
           </div>
         </article>
+      )}
+
+      {anuncio.data && usuario && anuncio.data.comprador === usuario.id && <EstimativaDePreco anuncioId={id} />}
+      {anuncio.data && usuario && anuncio.data.comprador !== usuario.id && anuncio.data.status === "ativo" && (
+        <PalpiteDePreco anuncioId={id} />
       )}
     </div>
   );

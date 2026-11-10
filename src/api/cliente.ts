@@ -139,6 +139,9 @@ export async function requisicao<T>(caminho: string, opcoes: OpcoesDeRequisicao 
     );
   }
 
+  // Fotos vão como multipart: o navegador monta o cabeçalho com o boundary.
+  const ehFormulario = typeof FormData !== "undefined" && corpo instanceof FormData;
+
   const controlador = new AbortController();
   const expirou = { valor: false };
   const temporizador = setTimeout(() => {
@@ -154,11 +157,11 @@ export async function requisicao<T>(caminho: string, opcoes: OpcoesDeRequisicao 
       signal: controlador.signal,
       headers: {
         Accept: "application/json",
-        ...(corpo !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(corpo !== undefined && !ehFormulario ? { "Content-Type": "application/json" } : {}),
         ...(tokenDeAcesso ? { Authorization: `Bearer ${tokenDeAcesso}` } : {}),
         ...cabecalhos,
       },
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      body: corpo === undefined ? undefined : ehFormulario ? (corpo as FormData) : JSON.stringify(corpo),
     });
 
     // Token expirado: renova uma vez e repete a mesma chamada.

@@ -32,6 +32,10 @@
   color: var(--texto-secundario);
 }
 
+.extra {
+  margin-bottom: var(--espaco-3);
+}
+
 .botoes {
   display: flex;
   gap: var(--espaco-1-5);
