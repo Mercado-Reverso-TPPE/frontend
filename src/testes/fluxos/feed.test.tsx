@@ -111,9 +111,10 @@ describe("feed de anúncios (API)", () => {
     await screen.findByRole("heading", { name: "3 anúncios" });
 
     await userEvent.click(await screen.findByRole("button", { name: "Esportes" }));
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     await userEvent.selectOptions(screen.getByLabelText("Distância máxima"), "25");
     await userEvent.type(screen.getByLabelText(/Orçamento até/), "3.000");
-    await userEvent.click(screen.getByRole("button", { name: "Aplicar preço" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
     await userEvent.selectOptions(screen.getByLabelText("Ordenar:"), "recentes");
 
     await waitFor(() =>
@@ -142,12 +143,30 @@ describe("feed de anúncios (API)", () => {
     const { roteador } = renderizarAplicacao({ usuario });
     await screen.findByRole("heading", { name: "3 anúncios" });
 
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     await userEvent.type(screen.getByLabelText(/Orçamento a partir/), "500");
     await userEvent.type(screen.getByLabelText(/Orçamento até/), "100");
-    await userEvent.click(screen.getByRole("button", { name: "Aplicar preço" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
 
     expect(screen.getByText("O máximo precisa ser maior ou igual ao mínimo.")).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("");
+  });
+
+  it("limpa os filtros do painel e fecha ao clicar em Limpar", async () => {
+    apiComFeed();
+    const { roteador } = renderizarAplicacao({ rota: "/?distancia=25&preco_max=1000", usuario });
+    await screen.findByRole("heading", { name: "3 anúncios" });
+
+    // Botão exibe badge com 2 filtros ativos
+    const botaoFiltros = screen.getByRole("button", { name: /Filtros/ });
+    expect(botaoFiltros).toBeInTheDocument();
+
+    await userEvent.click(botaoFiltros);
+    await userEvent.click(screen.getByRole("button", { name: "Limpar" }));
+
+    await waitFor(() => {
+      expect(roteador.state.location.search).toBe("");
+    });
   });
 
   it("carrega mais anúncios pelo cursor", async () => {
