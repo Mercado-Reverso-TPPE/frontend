@@ -20,6 +20,8 @@ Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquant
 
 Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, distância máxima e ordenação combinam entre si e ficam na URL; a lista carrega por páginas; o detalhe volta ao feed com os mesmos filtros. Com a API ligada, o feed exige sessão e localização, porque o backend só devolve anúncios cujo raio alcança quem busca.
 
+Abas do feed: **Todos**, **Procurando** e **Vendendo** ficam em `?tipo=` e combinam com os demais filtros. "Procurando" lê `GET /anuncios`; "Vendendo" lê `GET /vitrine` (produtos à venda com foto, conservação, visualizações e `vendedor_publico`); "Todos" intercala os dois. Enquanto o backend não publica `/vitrine`, a aba "Vendendo" fica vazia. O card "Procurando" mostra o comprador quando o item traz `comprador_publico`.
+
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios

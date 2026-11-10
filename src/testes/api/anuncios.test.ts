@@ -69,6 +69,7 @@ describe("listarFeed", () => {
     });
 
     const pagina = await listarFeed({
+      tipo: "procurando",
       busca: " bike ",
       categoria: "esportes",
       precoMin: 100,

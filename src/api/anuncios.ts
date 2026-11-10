@@ -15,7 +15,11 @@ import { ALL_ADS, MY_ADS } from "@/dados/demo";
 /** Ordenações aceitas pelo backend (`BuscaSalva.Ordenacao`). */
 export type OrdenacaoDoFeed = "distancia" | "recentes" | "preco_minimo" | "preco_maximo";
 
+/** Aba do feed: pedidos de compradores, produtos de vendedores ou os dois. */
+export type TipoDoFeed = "todos" | "procurando" | "vendendo";
+
 export interface FiltrosDoFeed {
+  tipo: TipoDoFeed;
   busca: string;
   /** Slug da categoria; vazio para todas. */
   categoria: string;
@@ -26,6 +30,7 @@ export interface FiltrosDoFeed {
 }
 
 export const FILTROS_PADRAO: FiltrosDoFeed = {
+  tipo: "todos",
   busca: "",
   categoria: "",
   precoMin: null,

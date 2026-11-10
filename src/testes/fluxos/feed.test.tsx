@@ -31,8 +31,26 @@ const CATEGORIAS = [
   { slug: "games", nome: "Games" },
 ];
 
-/** Backend com um feed de `total` anúncios, paginado de 12 em 12. */
-function apiComFeed(total = 3) {
+const produto = (id: string, nome: string, dados: Record<string, unknown> = {}) => ({
+  id,
+  nome,
+  descricao: "Produto à venda",
+  categoria: "games",
+  categoria_nome: "Games",
+  preco: "3200.00",
+  estado_conservacao: "seminovo",
+  foto: null,
+  cidade: "Brasília",
+  uf: "DF",
+  distancia_km: 4.8,
+  visualizacoes: 10,
+  criado_em: "2026-10-20T15:00:00Z",
+  vendedor_publico: { id: "v1", nome: "Bruno Kato", nota: "5.0" },
+  ...dados,
+});
+
+/** Backend com um feed de `total` anúncios, paginado de 12 em 12, e uma vitrine opcional. */
+function apiComFeed(total = 3, produtos: ReturnType<typeof produto>[] | null = null) {
   const todos = Array.from({ length: total }, (_, indice) => anuncio(`a${indice + 1}`, `Anúncio ${indice + 1}`));
   return simularApi({
     "GET /categorias": () => ({ corpo: CATEGORIAS }),
@@ -49,6 +67,14 @@ function apiComFeed(total = 3) {
       };
     },
     "GET /anuncios/a1": () => ({ corpo: todos[0] }),
+    ...(produtos && {
+      "GET /vitrine": (_corpo: unknown, chamada: { parametros: Record<string, string> }) => {
+        const filtrados = produtos.filter(
+          (item) => !chamada.parametros.categoria || item.categoria === chamada.parametros.categoria,
+        );
+        return { corpo: { count: filtrados.length, next: null, results: filtrados } };
+      },
+    }),
   });
 }
 
@@ -72,11 +98,14 @@ describe("feed de anúncios (demonstração)", () => {
     expect(screen.getAllByRole("button", { name: "Limpar filtros" }).length).toBeGreaterThan(0);
   });
 
-  it("não tem aba de anúncios de venda", async () => {
+  it("intercala pedidos e produtos na aba Todos", async () => {
     renderizarAplicacao();
-    await screen.findAllByText("iPhone 15 Pro Max 256GB");
+    await screen.findByRole("heading", { name: "9 anúncios" });
 
-    expect(screen.queryByRole("button", { name: /Vendendo/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+    const [primeiro, segundo] = screen.getAllByRole("article");
+    expect(within(primeiro!).getByText("Procurando")).toBeInTheDocument();
+    expect(within(segundo!).getByText("Vendendo")).toBeInTheDocument();
   });
 });
 
@@ -195,5 +224,78 @@ describe("recomendações", () => {
 
     expect(carrossel.queryByRole("button", { name: `Descartar recomendação ${nome}` })).not.toBeInTheDocument();
     expect(localStorage.getItem("quero.recomendacoes.descartadas")).toContain('"');
+  });
+});
+
+describe("abas Todos / Procurando / Vendendo", () => {
+  const vitrine = [produto("p1", "PS5 Slim"), produto("p2", "Bike Scott", { categoria: "esportes", categoria_nome: "Esportes" })];
+
+  it("troca a aba, guarda na URL e mostra só o tipo escolhido", async () => {
+    const chamadas = apiComFeed(3, vitrine);
+    const { roteador } = renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
+    expect(screen.getByText("5 resultados")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Vendendo" }));
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(screen.getByText("2 resultados")).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=vendendo");
+    expect(screen.getByRole("button", { name: "Vendendo" })).toHaveAttribute("aria-pressed", "true");
+    const cardsVendendo = screen.getAllByRole("article").filter((card) => !card.closest("section"));
+    expect(cardsVendendo).toHaveLength(2);
+    cardsVendendo.forEach((card) => expect(within(card).getByText("Vendendo")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: "Procurando" }));
+    expect(await screen.findByRole("heading", { name: "3 anúncios" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=procurando");
+    screen
+      .getAllByRole("article")
+      .filter((card) => !card.closest("section"))
+      .forEach((card) => expect(within(card).queryByText("Vendendo")).not.toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: "Todos" }));
+    expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=todos");
+    expect(chamadas.some((chamada) => chamada.caminho === "/vitrine")).toBe(true);
+  });
+
+  it("combina a aba com categoria, busca e ordenação e mantém a aba ao limpar", async () => {
+    const chamadas = apiComFeed(3, vitrine);
+    const { roteador } = renderizarAplicacao({ rota: "/?tipo=vendendo&q=bike&ordenar=recentes", usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Vendendo" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Esportes" }));
+    expect(await screen.findByRole("heading", { name: "1 anúncio" })).toBeInTheDocument();
+    expect(screen.getByText("1 resultado")).toBeInTheDocument();
+    expect(Object.fromEntries(new URLSearchParams(roteador.state.location.search))).toEqual({
+      tipo: "vendendo",
+      q: "bike",
+      ordenar: "recentes",
+      categoria: "esportes",
+    });
+    expect(chamadas.filter((chamada) => chamada.caminho === "/vitrine").at(-1)?.parametros).toMatchObject({
+      q: "bike",
+      categoria: "esportes",
+      ordenacao: "recentes",
+    });
+    expect(chamadas.some((chamada) => chamada.caminho === "/anuncios" && chamada.parametros.tamanho === "12")).toBe(false);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Limpar filtros" })[0]!);
+    await waitFor(() => expect(roteador.state.location.search).toBe("?tipo=vendendo"));
+  });
+
+  it("sem a vitrine no backend, Vendendo fica vazio e Todos mostra os pedidos", async () => {
+    apiComFeed(2);
+    const { roteador } = renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Vendendo" }));
+
+    expect(await screen.findByRole("heading", { name: "Nenhum anúncio encontrado" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=vendendo");
   });
 });
