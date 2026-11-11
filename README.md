@@ -153,6 +153,42 @@ docker compose down
 
 A interface fica em <http://localhost:5173>. O Compose sobe somente o frontend. O volume de código permite hot reload; as dependências ficam em volume separado dentro do contêiner. Após mudar dependências, reconstrua com `docker compose down` e `docker compose up --build`.
 
+## Deploy (Vercel)
+
+O frontend é publicado na Vercel com uma conta/time **do grupo**, não com a conta pessoal de um integrante.
+
+- **Produção:** <https://quero-frontend.vercel.app> (atualize aqui se o domínio mudar).
+- **Quem administra:** o time do grupo na Vercel, criado com o e-mail compartilhado do grupo. Todos os integrantes entram como membros do time; ninguém usa conta pessoal para publicar.
+- **Como publica:** `.github/workflows/deploy.yml` usa a Vercel CLI (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). Cada PR ganha um deploy de preview com a URL comentada no próprio PR; cada merge na `main` vai para produção. O caminho pela CLI evita a restrição do plano Hobby para repositórios de organização.
+- **SPA:** `vercel.json` reescreve todas as rotas para `/index.html`, então recarregar `/perfil` ou abrir o link de e-mail `/redefinir-senha?...` não dá 404. Os arquivos de `/assets` vão com cache longo, porque o nome já muda a cada build.
+- **Build:** framework Vite, `pnpm build`, saída `dist`, Node 22 (`engines` no `package.json`, igual ao `.mise.toml`) e pnpm pela versão de `packageManager`.
+
+### Configuração inicial (uma vez, pelo grupo)
+
+1. Criar a conta na Vercel com o e-mail do grupo, criar um time e convidar os integrantes.
+2. No time, criar o projeto apontando para este repositório (ou, se a importação não for permitida no plano, criar o projeto vazio com `vercel link` numa cópia local).
+3. Em **Settings → Environment Variables** do projeto, cadastrar para *Production* e *Preview*:
+   - `VITE_API_URL` — base da API em produção, com `/api/v1`;
+   - `VITE_API_TIMEOUT` — opcional, em ms (padrão 15000).
+4. Criar um token em **Account Settings → Tokens** (escopo: o time do grupo) e cadastrar no GitHub, em **Settings → Secrets and variables → Actions**: `VERCEL_TOKEN`, `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` (os dois ids estão em `.vercel/project.json` depois do `vercel link`).
+5. Pedir ao backend que inclua o domínio da Vercel em `CORS_ALLOWED_ORIGINS` e use esse domínio em `PASSWORD_RESET_URL` (`/redefinir-senha`) e `EMAIL_CHANGE_URL` (`/confirmar-email`).
+
+Sem os segredos, o workflow só avisa e não falha.
+
+### Deploy manual
+
+Com acesso ao time do grupo na Vercel:
+
+```bash
+pnpm dlx vercel login                  # entrar com a conta do grupo
+pnpm dlx vercel link                   # escolher o time e o projeto (uma vez)
+pnpm dlx vercel pull --yes --environment=production
+pnpm dlx vercel build --prod
+pnpm dlx vercel deploy --prebuilt --prod
+```
+
+Também dá para rodar o workflow **Deploy** à mão em *Actions → Deploy → Run workflow* (a partir da `main`, publica em produção; de outra branch, em preview).
+
 ## Testes e verificações
 
 ```bash

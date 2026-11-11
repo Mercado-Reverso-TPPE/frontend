@@ -1,0 +1,95 @@
+# Publica o frontend na Vercel com a conta do grupo, pela Vercel CLI.
+#
+# - Pull request: deploy de preview e comentário com a URL no PR.
+# - Merge na main: deploy de produção.
+#
+# Segredos do repositório (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN       token criado na conta/time do grupo na Vercel
+#   VERCEL_ORG_ID      id do time (orgId em .vercel/project.json)
+#   VERCEL_PROJECT_ID  id do projeto (projectId em .vercel/project.json)
+#
+# VITE_API_URL e VITE_API_TIMEOUT ficam nas variáveis de ambiente do projeto
+# na Vercel (Production e Preview); `vercel pull` as traz para o build.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # PR de fork não recebe os segredos; não há o que publicar.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    outputs:
+      url: ${{ steps.publicar.outputs.url }}
+    steps:
+      - name: Conferir segredos
+        id: segredos
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::Segredos da Vercel ausentes; deploy ignorado. Veja a seção Deploy do README."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.segredos.outputs.ok == 'true'
+
+      # A versão do pnpm vem de `packageManager` no package.json.
+      - uses: pnpm/action-setup@v4
+        if: steps.segredos.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.segredos.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar a Vercel CLI
+        if: steps.segredos.outputs.ok == 'true'
+        run: npm install --global vercel@latest
+
+      - name: Publicar
+        id: publicar
+        if: steps.segredos.outputs.ok == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Produção só a partir da main; qualquer outra branch vira preview.
+          AMBIENTE: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+        run: |
+          PROD=""
+          if [ "$AMBIENTE" = "production" ]; then PROD="--prod"; fi
+          vercel pull --yes --environment="$AMBIENTE" --token="$VERCEL_TOKEN"
+          vercel build $PROD --token="$VERCEL_TOKEN"
+          URL=$(vercel deploy --prebuilt $PROD --token="$VERCEL_TOKEN")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "### Deploy ($AMBIENTE)" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comentar a URL do preview no PR
+        if: steps.segredos.outputs.ok == 'true' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.publicar.outputs.url }}
+        # Atualiza o mesmo comentário a cada push, em vez de empilhar um por deploy.
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+            --body "Preview na Vercel: $URL" --edit-last --create-if-none
