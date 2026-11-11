@@ -248,27 +248,91 @@ describe("notificações", () => {
 });
 
 describe("histórico", () => {
-  it("filtra por papel e status e mostra data, contraparte, produto, valor e status", async () => {
+  it("mostra resumo, cartões com valor com sinal e uma trilha única de filtros", async () => {
     const chamadas = simularApi({
+      "GET /historico": (_corpo, chamada) => {
+        const todas = [
+          negociacao({ status: "concluida", concluida_em: "2026-10-25T10:00:00Z", contraparte: { id: "c1", nome: "Marina Prado" } }),
+          negociacao({
+            id: "n2",
+            papel: "comprador",
+            status: "concluida",
+            valor_final: "13500.00",
+            anuncio: { id: "a2", titulo: "MacBook Pro 14", categoria: "informatica" },
+            contraparte: { id: "c2", nome: "Lucas Tavares" },
+            concluida_em: "2026-08-15T10:00:00Z",
+          }),
+          negociacao({
+            id: "n3",
+            status: "cancelada",
+            valor_final: "800.00",
+            anuncio: { id: "a3", titulo: "Patins", categoria: "esportes" },
+            cancelada_em: "2026-10-01T10:00:00Z",
+          }),
+        ];
+        const { papel, status } = chamada.parametros;
+        const filtradas = todas.filter(
+          (item) => (!papel || item.papel === papel) && (!status || item.status === status),
+        );
+        return { corpo: { next: null, results: filtradas } };
+      },
+    });
+    const { roteador } = renderizarAplicacao({ rota: "/historico", usuario: eu });
+
+    const venda = within((await screen.findByRole("heading", { name: "Bicicleta aro 29" })).closest("li")!);
+    expect(venda.getByText("Vendido para Marina P. · 25/10/2026")).toBeInTheDocument();
+    expect(venda.getByText("R$ 1.950", { exact: false })).toHaveTextContent("+R$ 1.950");
+    expect(venda.getByText("Concluído")).toBeInTheDocument();
+
+    const compra = within(screen.getByRole("heading", { name: "MacBook Pro 14" }).closest("li")!);
+    expect(compra.getByText("Comprado de Lucas T. · 15/08/2026")).toBeInTheDocument();
+    expect(compra.getByText("R$ 13.500", { exact: false })).toHaveTextContent("-R$ 13.500");
+    expect(compra.getByRole("link", { name: "MacBook Pro 14" })).toHaveAttribute("href", "/historico/n2");
+
+    const resumo = within(screen.getByRole("region", { name: "Resumo" }));
+    expect(resumo.getByText("Negociações concluídas").previousSibling).toHaveTextContent("2");
+    expect(resumo.getByText("Volume negociado").previousSibling).toHaveTextContent("R$ 15.450");
+    expect(resumo.getByText("Total de negociações").previousSibling).toHaveTextContent("3");
+
+    const filtros = within(screen.getByRole("group", { name: "Filtrar histórico" }));
+    expect(filtros.getAllByRole("button").map((botao) => botao.textContent)).toEqual([
+      "Todos",
+      "🛒 Compras",
+      "🏷️ Vendas",
+      "❌ Encerradas",
+    ]);
+
+    await userEvent.click(filtros.getByRole("button", { name: "Compras" }));
+    await waitFor(() => expect(chamadas.at(-1)?.parametros).toEqual({ papel: "comprador" }));
+    expect(roteador.state.location.search).toBe("?filtro=compras");
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("region", { name: "Resumo" })).getByText("Total de negociações").previousSibling,
+      ).toHaveTextContent("1"),
+    );
+    expect(screen.getByRole("region", { name: "Resumo" })).toHaveTextContent("R$ 13.500");
+
+    await userEvent.click(filtros.getByRole("button", { name: "Encerradas" }));
+    await waitFor(() => expect(chamadas.at(-1)?.parametros).toEqual({ status: "cancelada" }));
+    expect(await screen.findByText("Cancelado")).toBeInTheDocument();
+  });
+
+  it("usa os totais da API quando ela envia o resumo", async () => {
+    simularApi({
       "GET /historico": () => ({
         corpo: {
-          next: null,
+          next: "http://api.teste/api/v1/historico?cursor=c2",
           results: [negociacao({ status: "concluida", concluida_em: "2026-10-25T10:00:00Z" })],
+          resumo: { concluidas: 40, volume: "98000.00", total: 52 },
         },
       }),
     });
     renderizarAplicacao({ rota: "/historico", usuario: eu });
 
-    const item = within((await screen.findByRole("heading", { name: "Bicicleta aro 29" })).closest("li")!);
-    expect(item.getByText("Concluída")).toBeInTheDocument();
-    expect(item.getByText("Venda")).toBeInTheDocument();
-    expect(item.getByText("R$ 1.950")).toBeInTheDocument();
-    expect(item.getByText("Comprador: Marina")).toBeInTheDocument();
-    expect(item.getByText("25/10/2026")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Compras" }));
-    await userEvent.click(screen.getByRole("button", { name: "Canceladas" }));
-    await waitFor(() => expect(chamadas.at(-1)?.parametros).toEqual({ papel: "comprador", status: "cancelada" }));
+    const resumo = within(await screen.findByRole("region", { name: "Resumo" }));
+    expect(resumo.getByText("R$ 98.000")).toBeInTheDocument();
+    expect(resumo.getByText("52")).toBeInTheDocument();
+    expect(screen.queryByText("Totais das negociações carregadas até aqui.")).not.toBeInTheDocument();
   });
 
   it("explica como começar quando não há negociações", async () => {
