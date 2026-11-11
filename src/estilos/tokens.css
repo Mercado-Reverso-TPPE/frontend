@@ -29,6 +29,9 @@
   --aviso: #FF9500;
   --estrela: #FFD60A;
 
+  --lilas: #AF52DE;
+  --lilas-superficie: #F7EEFC;
+
   /* ── Texto (modo claro) ────────────────────────────────── */
   --texto-primario: #1A1A1A;
   --texto-secundario: #666666;
@@ -153,6 +156,7 @@
   --sucesso-texto-suave: #4CC46D;
   --erro-superficie: #2A1413;
   --info-superficie: #0F1A2A;
+  --lilas-superficie: #22152A;
 
   --gradiente-hero: linear-gradient(135deg, #1A120C 0%, #141010 60%, #0F0F0F 100%);
   --borda-hero: #2A1B12;

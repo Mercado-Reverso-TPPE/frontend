@@ -26,7 +26,7 @@ Palpites e comparação integrados à API (QRO-10, QRO-11): o vendedor dá um pa
 
 Negociação integrada à API (QRO-12 a QRO-16): em `/negociacoes/:id` (`:id` é a oferta) ficam o histórico de valores, a contraproposta com justificativa, rodada e prazo, aceite e recusa com confirmação, e o chat, que fica somente leitura quando a API encerra a conversa. As ações mostradas seguem o estado que a API devolveu (`situacaoDaNegociacao` em `api/ofertas.ts`); limite de rodadas e expiração continuam com o backend. `/negociacoes/:id/concluir` cobre a conclusão bilateral e o cancelamento.
 
-Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central com não lidas e preferências por canal (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico filtrável por papel e status, com detalhe de valores e mensagens.
+Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central em cartões com ícone colorido por tipo, tempo relativo e destaque das não lidas (clicar marca como lida e abre o anúncio ou a negociação; o sino atualiza na hora), preferências por canal numa aba separada (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico filtrável por papel e status, com detalhe de valores e mensagens.
 
 As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
 
