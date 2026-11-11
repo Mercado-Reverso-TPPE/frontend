@@ -48,7 +48,13 @@ describe("meus anúncios", () => {
             anuncioDaApi({ id: "a1", titulo: "Ativo", status: "ativo" }),
             anuncioDaApi({ id: "a2", titulo: "Pausado", status: "pausado", ofertas_recebidas: 0 }),
             anuncioDaApi({ id: "a3", titulo: "Negociando", status: "em_negociacao" }),
-            anuncioDaApi({ id: "a4", titulo: "Fechado", status: "encerrado", ofertas_recebidas: 1 }),
+            anuncioDaApi({
+              id: "a4",
+              titulo: "Fechado",
+              status: "encerrado",
+              ofertas_recebidas: 1,
+              atualizado_em: "2026-10-25T15:00:00Z",
+            }),
           ],
         },
       }),
@@ -60,10 +66,11 @@ describe("meus anúncios", () => {
 
     const ativo = item("Ativo");
     expect(ativo.getByText("Ativo", { selector: "span" })).toBeInTheDocument();
-    expect(ativo.getByText("ofertas recebidas", { exact: false })).toHaveTextContent("3 ofertas recebidas");
-    expect(ativo.getByText("R$ 1.200 a R$ 2.500")).toBeInTheDocument();
-    expect(ativo.getByText("Raio de 25 km")).toBeInTheDocument();
-    expect(ativo.getByRole("link", { name: "Editar" })).toHaveAttribute("href", "/meus-anuncios/a1/editar");
+    expect(ativo.getByText("3", { selector: "strong" }).parentElement).toHaveTextContent(/^3 ofertas$/);
+    expect(ativo.getByText("R$ 1.200 — R$ 2.500")).toBeInTheDocument();
+    expect(ativo.getByText("Publicado em 20/10/2026")).toBeInTheDocument();
+    expect(ativo.getByRole("link", { name: "Ver" })).toHaveAttribute("href", "/meus-anuncios/a1/editar");
+    expect(ativo.getByRole("link", { name: "3 ofertas" })).toHaveAttribute("href", "/anuncios/a1/ofertas");
     expect(ativo.getByRole("button", { name: "Pausar" })).toBeInTheDocument();
     expect(ativo.getByRole("button", { name: "Encerrar" })).toBeInTheDocument();
     expect(ativo.queryByRole("button", { name: "Reativar" })).not.toBeInTheDocument();
@@ -71,13 +78,16 @@ describe("meus anúncios", () => {
     const pausado = item("Pausado");
     expect(pausado.getByRole("button", { name: "Reativar" })).toBeInTheDocument();
     expect(pausado.queryByRole("button", { name: "Pausar" })).not.toBeInTheDocument();
-    expect(pausado.queryByRole("link", { name: "Ver ofertas" })).not.toBeInTheDocument();
+    expect(pausado.queryByRole("link", { name: /ofertas?$/ })).not.toBeInTheDocument();
 
-    for (const titulo of ["Negociando", "Fechado"]) {
-      const semAcoes = item(titulo);
-      expect(semAcoes.queryByRole("link", { name: "Editar" })).not.toBeInTheDocument();
-      expect(semAcoes.queryByRole("button", { name: /Pausar|Reativar|Encerrar/ })).not.toBeInTheDocument();
-    }
+    const negociando = item("Negociando");
+    expect(negociando.getByRole("link", { name: "Ver" })).toHaveAttribute("href", "/anuncios/a3");
+    expect(negociando.queryByRole("button", { name: /Pausar|Reativar|Encerrar/ })).not.toBeInTheDocument();
+
+    const fechado = item("Fechado");
+    expect(fechado.getByText("Encerrado em 25/10/2026")).toBeInTheDocument();
+    expect(fechado.queryByRole("group", { name: "Ações de Fechado" })).not.toBeInTheDocument();
+    expect(fechado.queryByRole("link")).not.toBeInTheDocument();
     expect(item("Negociando").getByText("Em negociação")).toBeInTheDocument();
   });
 
