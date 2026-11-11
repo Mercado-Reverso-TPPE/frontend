@@ -242,13 +242,111 @@ describe("publicar anúncio", () => {
     expect(screen.getByText("Falta sua localização")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Publicar anúncio" })).toBeDisabled();
   });
+
+  it("alterna entre Quero Comprar e Quero Vender e ajusta a URL e os campos", async () => {
+    simularApi({ "GET /categorias": () => ({ corpo: CATEGORIAS }) });
+    const { roteador } = renderizarAplicacao({ rota: "/anunciar", usuario });
+
+    expect(screen.getByRole("heading", { name: "Criar anúncio" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Quero Comprar/ })).toHaveAttribute("aria-checked", "true");
+
+    await userEvent.click(screen.getByRole("radio", { name: /Quero Vender/ }));
+    expect(roteador.state.location.search).toBe("?tipo=vender");
+    expect(screen.getByRole("radio", { name: /Quero Vender/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "Anunciar produto" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Título do produto/)).toHaveAttribute(
+      "placeholder",
+      "Ex: iPhone 14 Pro Max 256GB Space Black",
+    );
+    expect(screen.getByLabelText(/Preço \(R\$\)/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Mínimo/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Quero Comprar/ }));
+    expect(roteador.state.location.search).toBe("?tipo=comprar");
+    expect(screen.getByRole("button", { name: "Publicar anúncio" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Mínimo/)).toBeInTheDocument();
+  });
+
+  it("publica produto no catálogo pelo modo vender", async () => {
+    const chamadas = simularApi({
+      "GET /categorias": () => ({ corpo: CATEGORIAS }),
+      "POST /produtos": (corpo) => ({
+        status: 201,
+        corpo: {
+          id: "prod-1",
+          nome: (corpo as { nome: string }).nome,
+          descricao: (corpo as { descricao: string }).descricao,
+          categoria: (corpo as { categoria: string }).categoria,
+          categoria_nome: "Eletrônicos",
+          estado_conservacao: "novo",
+          preco: (corpo as { preco: string }).preco,
+          status: "disponivel",
+          fotos: [],
+          criado_em: "2026-10-20T15:00:00Z",
+        },
+      }),
+    });
+
+    const { roteador } = renderizarAplicacao({ rota: "/anunciar?tipo=vender", usuario });
+
+    await userEvent.type(screen.getByLabelText(/Título do produto/), "iPhone 14 Pro");
+    await userEvent.selectOptions(await screen.findByLabelText(/^Categoria/), "eletronicos");
+    await userEvent.type(screen.getByLabelText(/^Descrição/), "Novo na caixa lacrada.");
+    await userEvent.click(screen.getByRole("button", { name: "Novo" }));
+    await userEvent.type(screen.getByLabelText(/Preço \(R\$\)/), "4.500,00");
+    await userEvent.click(screen.getByRole("button", { name: "Anunciar produto" }));
+
+    expect(await screen.findByText(/"iPhone 14 Pro" foi cadastrado no seu catálogo/)).toBeInTheDocument();
+    expect(roteador.state.location.pathname).toBe("/minha-loja");
+    expect(chamadas.find((c) => c.metodo === "POST" && c.caminho === "/produtos")?.corpo).toEqual({
+      nome: "iPhone 14 Pro",
+      descricao: "Novo na caixa lacrada.",
+      categoria: "eletronicos",
+      estado_conservacao: "novo",
+      preco: "4500.00",
+    });
+  });
+
+  it("permite múltiplos estados e urgência no modo comprar, e estado único no modo vender", async () => {
+    simularApi({ "GET /categorias": () => ({ corpo: CATEGORIAS }) });
+    renderizarAplicacao({ rota: "/anunciar", usuario });
+
+    const chipNovo = screen.getByRole("button", { name: "Novo" });
+    const chipSemi = screen.getByRole("button", { name: "Semi-novo" });
+
+    await userEvent.click(chipNovo);
+    expect(chipNovo).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(chipSemi);
+    expect(chipSemi).toHaveAttribute("aria-pressed", "true");
+    expect(chipNovo).toHaveAttribute("aria-pressed", "true");
+
+    const checkboxUrgencia = screen.getByLabelText(/Preciso com urgência/);
+    expect(checkboxUrgencia).not.toBeChecked();
+    await userEvent.click(checkboxUrgencia);
+    expect(checkboxUrgencia).toBeChecked();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Quero Vender/ }));
+    const chipNovoVender = screen.getByRole("button", { name: "Novo" });
+    const chipUsadoVender = screen.getByRole("button", { name: "Usado" });
+
+    await userEvent.click(chipNovoVender);
+    expect(chipNovoVender).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(chipUsadoVender);
+    expect(chipUsadoVender).toHaveAttribute("aria-pressed", "true");
+    expect(chipNovoVender).toHaveAttribute("aria-pressed", "false");
+  });
 });
 
 describe("editar anúncio", () => {
   it("carrega o anúncio, salva as mudanças e volta para a lista", async () => {
     const chamadas = simularApi({
       "GET /categorias": () => ({ corpo: CATEGORIAS }),
-      "GET /anuncios/a1": () => ({ corpo: anuncioDaApi() }),
+      "GET /anuncios/a1": () => ({
+        corpo: anuncioDaApi({
+          estado_conservacao: ["Novo", "Semi-novo"],
+          urgente: true,
+        }),
+      }),
       "PATCH /anuncios/a1": (corpo) => ({ corpo: anuncioDaApi(corpo as object) }),
       "GET /anuncios/meus": () => ({ corpo: { next: null, results: [anuncioDaApi()] } }),
     });
@@ -257,6 +355,9 @@ describe("editar anúncio", () => {
     const titulo = await screen.findByLabelText(/^Título/);
     expect(titulo).toHaveValue("Bicicleta aro 29");
     expect(screen.getByLabelText(/Mínimo/)).toHaveValue("1200");
+    expect(screen.getByRole("button", { name: "Novo" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Semi-novo" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText(/Preciso com urgência/)).toBeChecked();
     expect(chamadas[0]?.parametros).toEqual({ meus: "true" });
 
     await userEvent.clear(titulo);
@@ -269,7 +370,31 @@ describe("editar anúncio", () => {
     expect(chamadas.find((chamada) => chamada.metodo === "PATCH")?.corpo).toMatchObject({
       titulo: "Bicicleta aro 29 com suspensão",
       raio_km: 25,
+      estado_conservacao: ["Novo", "Semi-novo"],
+      urgente: true,
     });
+  });
+
+  it("exibe estado desejado, foto e urgência no detalhe do anúncio", async () => {
+    simularApi({
+      "GET /anuncios/a1": () => ({
+        corpo: anuncioDaApi({
+          estado_conservacao: ["Novo", "Semi-novo"],
+          foto: "https://exemplo.com/bike.jpg",
+          urgente: true,
+        }),
+      }),
+    });
+
+    renderizarAplicacao({ rota: "/anuncios/a1", usuario });
+
+    expect(await screen.findByRole("heading", { name: "Bicicleta aro 29" })).toBeInTheDocument();
+    expect(screen.getByText("Urgente")).toBeInTheDocument();
+    expect(screen.getByText("Novo, Semi-novo")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Foto do anúncio Bicicleta aro 29/ })).toHaveAttribute(
+      "src",
+      "https://exemplo.com/bike.jpg",
+    );
   });
 
   it("não oferece edição para anúncio encerrado", async () => {

@@ -69,10 +69,23 @@ export default function AnuncioDetalhe() {
               Procurando
             </Badge>
             <Badge>{anuncio.data.categoriaNome}</Badge>
+            {anuncio.data.urgente && (
+              <Badge tom="aviso" icone="🔥">
+                Urgente
+              </Badge>
+            )}
             {anuncio.data.status !== "ativo" && (
               <Badge tom={TOM_DO_STATUS[anuncio.data.status]}>{ROTULO_DO_STATUS[anuncio.data.status]}</Badge>
             )}
           </div>
+
+          {anuncio.data.foto && (
+            <img
+              src={anuncio.data.foto}
+              alt={`Foto do anúncio ${anuncio.data.titulo}`}
+              className={estilos.fotoProduto}
+            />
+          )}
 
           <h1 className={estilos.titulo}>{anuncio.data.titulo}</h1>
           <p className={estilos.descricao}>{anuncio.data.descricao}</p>
@@ -82,6 +95,12 @@ export default function AnuncioDetalhe() {
               <dt>Orçamento</dt>
               <dd>{faixaDoAnuncio(anuncio.data)}</dd>
             </div>
+            {anuncio.data.estadoConservacao && anuncio.data.estadoConservacao.length > 0 && (
+              <div>
+                <dt>Estado desejado</dt>
+                <dd>{anuncio.data.estadoConservacao.join(", ")}</dd>
+              </div>
+            )}
             {localDoAnuncio(anuncio.data) && (
               <div>
                 <dt>Local</dt>

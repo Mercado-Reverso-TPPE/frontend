@@ -29,8 +29,74 @@
   text-decoration: none;
 }
 
+.escolhaModo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-2);
+  margin-bottom: var(--espaco-3);
+}
+
+.cartaoModo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--espaco-2-5);
+  border: 2px solid var(--borda);
+  border-radius: var(--raio-card);
+  background-color: var(--fundo-elevado);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transicao-padrao), background-color var(--transicao-padrao);
+}
+
+.cartaoModo:hover {
+  border-color: var(--laranja);
+}
+
+.cartaoSelecionado {
+  border-color: var(--laranja);
+  background-color: var(--laranja-claro);
+}
+
+.checkSelo {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--laranja);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modoIcone {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.modoTitulo {
+  font-family: var(--fonte-titulo);
+  font-size: 16px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+  margin-bottom: 4px;
+}
+
+.modoDescricao {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  line-height: 1.4;
+}
+
 @media (max-width: 640px) {
   .pagina {
     padding: var(--espaco-3) var(--espaco-2) var(--espaco-5);
+  }
+
+  .escolhaModo {
+    grid-template-columns: 1fr;
   }
 }
