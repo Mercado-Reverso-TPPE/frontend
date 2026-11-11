@@ -201,6 +201,35 @@ pnpm build          # build de produção
 
 Os testes vivem em `src/testes/`: `componentes/` cobre os componentes-base e os padrões de estado, `api/` e `utils/` cobrem filtro, ordenação, erros do cliente e formatação, e `fluxos/` monta a aplicação inteira com `createMemoryRouter` para cobrir navegação, rota privada e os estados do feed. `src/testes/utilitarios.tsx` entrega `renderizar` e `renderizarAplicacao` já com roteador, sessão e cache.
 
+## Testes ponta a ponta (Selenium)
+
+`e2e/` tem os testes de navegador com **Python + pytest + Selenium WebDriver** (Chrome headless), escritos com Page Objects (`e2e/paginas/`: cabeçalho, entrar, feed, criar anúncio, meus anúncios, perfil, notificações e histórico). Python foi escolhido porque o Selenium Manager já baixa o driver certo e o pytest dá fixtures simples para sessão e limpeza.
+
+Cenários (`e2e/testes/`): home deslogado (hero, abas e categorias), entrar e sair, senha errada, busca e categoria na URL, detalhe e volta com os filtros, criar → pausar → reativar → encerrar um anúncio, rota privada com retorno ao destino, recarga de rota profunda sem 404, marcar todas as notificações como lidas e editar o telefone do perfil.
+
+| Variável | Efeito |
+| :--- | :--- |
+| `E2E_BASE_URL` | URL alvo (padrão: produção na Vercel). |
+| `E2E_EMAIL` · `E2E_SENHA` | Conta de teste **dedicada** (nunca conta pessoal). Sem elas, os cenários com sessão são pulados. |
+| `E2E_HEADLESS=0` | Abre o Chrome com janela, para depurar. |
+
+Para rodar localmente contra o servidor de desenvolvimento:
+
+```bash
+PORT=5173 pnpm dev                               # em outro terminal
+cd e2e
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+E2E_BASE_URL=http://localhost:5173 pytest        # só os cenários públicos
+E2E_BASE_URL=http://localhost:5173 E2E_EMAIL=... E2E_SENHA=... pytest
+```
+
+Contra os dados de demonstração (sem `VITE_API_URL`) o login aceita qualquer senha e o perfil não persiste, então "senha errada" e "editar telefone" só fazem sentido com a API ligada.
+
+Os testes não deixam dados ativos: anúncios criados levam o prefixo `[E2E]` e uma fixture encerra, ao final, qualquer um que tenha ficado ativo ou pausado; o telefone volta ao valor original. Em falha, capturas de tela, HTML, console e URL vão para `e2e/artefatos/`.
+
+O workflow `.github/workflows/e2e.yml` roda à mão (**Actions → E2E → Run workflow**, com URL opcional) e depois de cada deploy de produção bem-sucedido, e publica `e2e/artefatos/` como artefato quando algum teste falha. Segredos: `E2E_EMAIL` e `E2E_SENHA`; variável opcional `E2E_BASE_URL`.
+
 ## Configuração
 
 | Variável | Efeito |
