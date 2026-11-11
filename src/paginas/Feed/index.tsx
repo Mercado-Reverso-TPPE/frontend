@@ -17,6 +17,7 @@ import type { EstatisticasPublicas } from "@/api/estatisticas";
 import { useEstatisticas, useFeed, usePertoDeVoce, useRecomendacoes } from "@/hooks/useAnuncios";
 import { useFiltros } from "@/hooks/useFiltros";
 import { useSessao } from "@/hooks/useSessao";
+import estilos from "./Feed.module.css";
 
 /**
  * Feed — tela inicial (QRO-07, QRO-09).
@@ -90,7 +91,7 @@ export default function Feed() {
     return (
       <>
         <Hero metricas={metricas} />
-        <div className="conteudo" style={{ paddingBlock: "var(--espaco-4)" }}>
+        <div className="conteudo conteudo-com-respiro">
           {semLocalizacao ? (
             <EstadoVazio
               icone="📍"
@@ -146,7 +147,7 @@ export default function Feed() {
         habilitarContagem={podeBuscar}
       />
 
-      <div className="conteudo" style={{ paddingBlock: "var(--espaco-3) var(--espaco-5)" }}>
+      <div className={`conteudo ${estilos.corpo}`}>
         {(feed.isPending || verificando) && <EsqueletoDeAnuncios />}
 
         {feed.isError && (
@@ -167,7 +168,7 @@ export default function Feed() {
         )}
 
         {itens.length > 0 && total !== undefined && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-4)" }}>
+          <div className={estilos.blocos}>
             <div>
               <ResumoDaLista total={total} ordenacao={filtros.ordenacao} aoMudarOrdenacao={(ordenacao) => alterar({ ordenacao })} />
               <GradeDeAnuncios itens={primeiroBloco} />
@@ -186,7 +187,7 @@ export default function Feed() {
             <GradeDeAnuncios itens={segundoBloco} />
 
             {feed.hasNextPage && (
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <div className={estilos.carregarMais}>
                 <Botao variante="secundario" carregando={feed.isFetchingNextPage} onClick={() => feed.fetchNextPage()}>
                   Carregar mais anúncios
                 </Botao>
