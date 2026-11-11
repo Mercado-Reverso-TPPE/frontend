@@ -78,6 +78,7 @@ export function Cabecalho() {
         <Link
           to="/notificacoes"
           className={estilos.sino}
+          data-testid="sino"
           aria-label={naoLidas > 0 ? `Notificações, ${naoLidas} não lidas` : "Notificações"}
         >
           <IBell />
@@ -93,6 +94,7 @@ export function Cabecalho() {
             <button
               type="button"
               className={estilos.gatilho}
+              data-testid="menu-da-conta"
               onClick={() => setMenuAberto((aberto) => !aberto)}
               aria-expanded={menuAberto}
               aria-haspopup="menu"
