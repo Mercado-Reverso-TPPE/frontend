@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
 import { ErroDeApi, errosDeValidacao } from "@/api/cliente";
 import {
   CANAIS,
+  contarNaoLidas,
   destinoDaNotificacao,
   listarNotificacoes,
   marcarComoLida,
@@ -12,39 +19,38 @@ import {
   salvarPreferencias,
   TIPO_OBRIGATORIO,
   TIPOS_DE_NOTIFICACAO,
+  visualDaNotificacao,
   type Notificacao,
   type Preferencia,
 } from "@/api/notificacoes";
-import { Badge, Botao, Chip } from "@/componentes/base";
+import type { Pagina } from "@/api/paginacao";
+import { Botao, Chip } from "@/componentes/base";
 import { Aviso, Carregando, ErroAoCarregar, EstadoVazio } from "@/componentes/estado";
 import negociacaoEstilos from "@/componentes/negociacao/Negociacao.module.css";
 import { fmtDataHora, fmtPlural } from "@/utils/formato";
-import estilos from "@/paginas/MeusAnuncios/MeusAnuncios.module.css";
+import { fmtHaQuanto } from "@/utils/tempo";
+import estilos from "./Notificacoes.module.css";
 
 /** Central de notificações e preferências de canal (QRO-17). */
 export default function Notificacoes() {
   const [busca, setBusca] = useSearchParams();
   const aba = busca.get("aba") === "preferencias" ? "preferencias" : "central";
 
-  return (
-    <div className={estilos.pagina}>
-      <div className={estilos.topo}>
-        <h1>Notificações</h1>
-        <div className={estilos.acoes} role="group" aria-label="Seções">
-          <Chip ativo={aba === "central"} onClick={() => setBusca({}, { replace: true })}>
-            Central
-          </Chip>
-          <Chip ativo={aba === "preferencias"} onClick={() => setBusca({ aba: "preferencias" }, { replace: true })}>
-            Preferências
-          </Chip>
-        </div>
-      </div>
-      {aba === "central" ? <Central /> : <Preferencias />}
+  const abas = (
+    <div className={estilos.abas} role="group" aria-label="Seções">
+      <Chip ativo={aba === "central"} onClick={() => setBusca({}, { replace: true })}>
+        Central
+      </Chip>
+      <Chip ativo={aba === "preferencias"} onClick={() => setBusca({ aba: "preferencias" }, { replace: true })}>
+        Preferências
+      </Chip>
     </div>
   );
+
+  return <div className={estilos.pagina}>{aba === "central" ? <Central abas={abas} /> : <Preferencias abas={abas} />}</div>;
 }
 
-function Central() {
+function Central({ abas }: { abas: ReactNode }) {
   const navegar = useNavigate();
   const clienteDeConsulta = useQueryClient();
   const [erro, setErro] = useState<string>();
@@ -55,33 +61,69 @@ function Central() {
     initialPageParam: "1" as string | null,
     getNextPageParam: (pagina) => pagina.proximo,
   });
+  // A mesma consulta do sino: os dois contadores andam juntos.
+  const contagem = useQuery({ queryKey: ["notificacoes", "nao-lidas"], queryFn: contarNaoLidas });
+
+  const lista = notificacoes.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const naoLidasDaLista = lista.filter((notificacao) => !notificacao.lidaEm);
+  const naoLidas = contagem.data ?? naoLidasDaLista.length;
+
+  /** Marca na tela na hora (lista e sino) e confirma com o servidor depois. */
+  const marcarNaTela = (ids: string[]) => {
+    const agora = new Date().toISOString();
+    clienteDeConsulta.setQueryData<InfiniteData<Pagina<Notificacao>>>(["notificacoes", "lista"], (dados) =>
+      dados && {
+        ...dados,
+        pages: dados.pages.map((pagina) => ({
+          ...pagina,
+          itens: pagina.itens.map((item) => (ids.includes(item.id) && !item.lidaEm ? { ...item, lidaEm: agora } : item)),
+        })),
+      },
+    );
+    clienteDeConsulta.setQueryData<number>(["notificacoes", "nao-lidas"], (atual) =>
+      atual === undefined ? atual : Math.max(0, atual - ids.length),
+    );
+  };
 
   const atualizar = () => clienteDeConsulta.invalidateQueries({ queryKey: ["notificacoes"] });
 
   const marcar = useMutation({
     mutationFn: (ids: string[]) => Promise.all(ids.map(marcarComoLida)),
+    onMutate: marcarNaTela,
     onError: (falha) => setErro(falha instanceof ErroDeApi ? falha.message : "Não foi possível marcar como lida."),
     onSettled: atualizar,
   });
 
-  const lista = notificacoes.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
-  const naoLidas = lista.filter((notificacao) => !notificacao.lidaEm);
-
-  const abrir = async (notificacao: Notificacao) => {
-    if (!notificacao.lidaEm) {
-      try {
-        await marcarComoLida(notificacao.id);
-        void atualizar();
-      } catch {
-        // Abrir o destino importa mais que a marcação; ela é refeita na próxima visita.
-      }
-    }
+  const abrir = (notificacao: Notificacao) => {
+    if (!notificacao.lidaEm) marcar.mutate([notificacao.id]);
     const destino = destinoDaNotificacao(notificacao);
     if (destino) navegar(destino);
   };
 
   return (
     <>
+      <div className={estilos.topo}>
+        <div>
+          <h1>Notificações</h1>
+          {notificacoes.isSuccess && (
+            <span className={estilos.resumo} role="status">
+              {naoLidas ? fmtPlural(naoLidas, "não lida", "não lidas") : "Tudo lido"}
+            </span>
+          )}
+        </div>
+        {naoLidasDaLista.length > 0 && (
+          <Botao
+            variante="texto"
+            tamanho="pequeno"
+            carregando={marcar.isPending}
+            onClick={() => marcar.mutate(naoLidasDaLista.map((notificacao) => notificacao.id))}
+          >
+            Marcar todas como lidas
+          </Botao>
+        )}
+      </div>
+      {abas}
+
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       {notificacoes.isPending && <Carregando rotulo="Carregando notificações…" />}
       {notificacoes.isError && (
@@ -98,60 +140,10 @@ function Central() {
       )}
 
       {lista.length > 0 && (
-        <div className={estilos.topo}>
-          <span className={estilos.resumo} role="status">
-            {naoLidas.length ? fmtPlural(naoLidas.length, "não lida", "não lidas") : "Tudo lido"}
-          </span>
-          {naoLidas.length > 0 && (
-            <Botao
-              variante="texto"
-              tamanho="pequeno"
-              carregando={marcar.isPending}
-              onClick={() => marcar.mutate(naoLidas.map((notificacao) => notificacao.id))}
-            >
-              Marcar todas como lidas
-            </Botao>
-          )}
-        </div>
-      )}
-
-      {lista.length > 0 && (
         <ul className={estilos.lista} aria-label="Notificações">
-          {lista.map((notificacao) => {
-            const destino = destinoDaNotificacao(notificacao);
-            return (
-              <li key={notificacao.id} className={estilos.item}>
-                <div className={estilos.info}>
-                  <div className={estilos.linhaTitulo}>
-                    <h2>{notificacao.titulo}</h2>
-                    {!notificacao.lidaEm && <Badge tom="marca">Não lida</Badge>}
-                  </div>
-                  <p className={negociacaoEstilos.texto}>{notificacao.mensagem}</p>
-                  <p className={estilos.detalhes}>
-                    <span>{rotuloDoTipo(notificacao.tipo)}</span>
-                    <span>{fmtDataHora(notificacao.criadaEm)}</span>
-                  </p>
-                </div>
-                <div className={estilos.acoes}>
-                  {destino && (
-                    <Botao tamanho="pequeno" variante="secundario" onClick={() => void abrir(notificacao)}>
-                      Abrir
-                    </Botao>
-                  )}
-                  {!notificacao.lidaEm && (
-                    <Botao
-                      tamanho="pequeno"
-                      variante="texto"
-                      onClick={() => marcar.mutate([notificacao.id])}
-                      aria-label={`Marcar “${notificacao.titulo}” como lida`}
-                    >
-                      Marcar como lida
-                    </Botao>
-                  )}
-                </div>
-              </li>
-            );
-          })}
+          {lista.map((notificacao) => (
+            <CartaoDeNotificacao key={notificacao.id} notificacao={notificacao} aoAbrir={() => abrir(notificacao)} />
+          ))}
         </ul>
       )}
 
@@ -170,9 +162,50 @@ function Central() {
   );
 }
 
+/**
+ * Cartão de uma notificação. O título é o botão: o cartão inteiro reage ao
+ * clique, que marca como lida e leva ao anúncio ou à negociação.
+ */
+function CartaoDeNotificacao({ notificacao, aoAbrir }: { notificacao: Notificacao; aoAbrir: () => void }) {
+  const naoLida = !notificacao.lidaEm;
+  const { icone, tom } = visualDaNotificacao(notificacao);
+  const temDestino = destinoDaNotificacao(notificacao) !== null;
+
+  return (
+    <li className={`${estilos.cartao} ${naoLida ? estilos.naoLida : ""} ${temDestino ? estilos.clicavel : ""}`}>
+      <span className={`${estilos.icone} ${estilos[`tom_${tom}`]}`} aria-hidden="true">
+        {icone}
+      </span>
+      <div className={estilos.corpo}>
+        <h2 className={estilos.titulo}>
+          {temDestino || naoLida ? (
+            <button type="button" className={estilos.abrir} onClick={aoAbrir}>
+              {notificacao.titulo}
+            </button>
+          ) : (
+            notificacao.titulo
+          )}
+        </h2>
+        <p className={estilos.mensagem}>{notificacao.mensagem}</p>
+        <p className={estilos.meta}>
+          <span className="apenas-leitor-de-tela">{rotuloDoTipo(notificacao.tipo)} · </span>
+          <time dateTime={notificacao.criadaEm} title={fmtDataHora(notificacao.criadaEm)}>
+            {fmtHaQuanto(notificacao.criadaEm)}
+          </time>
+        </p>
+      </div>
+      {naoLida && (
+        <span className={estilos.ponto}>
+          <span className="apenas-leitor-de-tela">Não lida</span>
+        </span>
+      )}
+    </li>
+  );
+}
+
 const chave = (preferencia: Pick<Preferencia, "tipo" | "canal">) => `${preferencia.tipo}:${preferencia.canal}`;
 
-function Preferencias() {
+function Preferencias({ abas }: { abas: ReactNode }) {
   const clienteDeConsulta = useQueryClient();
   const preferencias = useQuery({ queryKey: ["notificacoes", "preferencias"], queryFn: obterPreferencias });
   const [marcadas, setMarcadas] = useState<Record<string, boolean>>({});
@@ -204,12 +237,38 @@ function Preferencias() {
     },
   });
 
-  if (preferencias.isPending) return <Carregando rotulo="Carregando preferências…" />;
+  const topo = (
+    <>
+      <div className={estilos.topo}>
+        <div>
+          <h1>Notificações</h1>
+          <span className={estilos.resumo}>Escolha o que receber e por qual canal</span>
+        </div>
+      </div>
+      {abas}
+    </>
+  );
+
+  if (preferencias.isPending) {
+    return (
+      <>
+        {topo}
+        <Carregando rotulo="Carregando preferências…" />
+      </>
+    );
+  }
   if (preferencias.isError) {
-    return <ErroAoCarregar erro={preferencias.error} aoTentarDeNovo={() => preferencias.refetch()} />;
+    return (
+      <>
+        {topo}
+        <ErroAoCarregar erro={preferencias.error} aoTentarDeNovo={() => preferencias.refetch()} />
+      </>
+    );
   }
 
   return (
+    <>
+    {topo}
     <form
       className={negociacaoEstilos.secao}
       onSubmit={(evento) => {
@@ -270,5 +329,6 @@ function Preferencias() {
         </Botao>
       </div>
     </form>
+    </>
   );
 }
