@@ -50,7 +50,11 @@ const produto = (id: string, nome: string, dados: Record<string, unknown> = {}) 
 });
 
 /** Backend com um feed de `total` anúncios, paginado de 12 em 12, e uma vitrine opcional. */
-function apiComFeed(total = 3, produtos: ReturnType<typeof produto>[] | null = null) {
+function apiComFeed(
+  total = 3,
+  produtos: ReturnType<typeof produto>[] | null = null,
+  extras: Parameters<typeof simularApi>[0] = {},
+) {
   const todos = Array.from({ length: total }, (_, indice) => anuncio(`a${indice + 1}`, `Anúncio ${indice + 1}`));
   return simularApi({
     "GET /categorias": () => ({ corpo: CATEGORIAS }),
@@ -75,8 +79,13 @@ function apiComFeed(total = 3, produtos: ReturnType<typeof produto>[] | null = n
         return { corpo: { count: filtrados.length, next: null, results: filtrados } };
       },
     }),
+    ...extras,
   });
 }
+
+/** Botão de uma aba (Todos / Procurando / Vendendo), sem confundir com o chip "Todos". */
+const aba = (nome: string) =>
+  within(screen.getByRole("group", { name: "Tipo de anúncio" })).getByRole("button", { name: nome });
 
 const chamadasDoFeed = (chamadas: ReturnType<typeof simularApi>) =>
   chamadas.filter((chamada) => chamada.caminho === "/anuncios" && chamada.parametros.tamanho === "12");
@@ -102,7 +111,7 @@ describe("feed de anúncios (demonstração)", () => {
     renderizarAplicacao();
     await screen.findByRole("heading", { name: "9 anúncios" });
 
-    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+    expect(aba("Todos")).toHaveAttribute("aria-pressed", "true");
     const [primeiro, segundo] = screen.getAllByRole("article");
     expect(within(primeiro!).getByText("Procurando")).toBeInTheDocument();
     expect(within(segundo!).getByText("Vendendo")).toBeInTheDocument();
@@ -236,18 +245,18 @@ describe("abas Todos / Procurando / Vendendo", () => {
 
     expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
     expect(screen.getByText("5 resultados")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+    expect(aba("Todos")).toHaveAttribute("aria-pressed", "true");
 
-    await userEvent.click(screen.getByRole("button", { name: "Vendendo" }));
+    await userEvent.click(aba("Vendendo"));
     expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
     expect(screen.getByText("2 resultados")).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("?tipo=vendendo");
-    expect(screen.getByRole("button", { name: "Vendendo" })).toHaveAttribute("aria-pressed", "true");
+    expect(aba("Vendendo")).toHaveAttribute("aria-pressed", "true");
     const cardsVendendo = screen.getAllByRole("article").filter((card) => !card.closest("section"));
     expect(cardsVendendo).toHaveLength(2);
     cardsVendendo.forEach((card) => expect(within(card).getByText("Vendendo")).toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: "Procurando" }));
+    await userEvent.click(aba("Procurando"));
     expect(await screen.findByRole("heading", { name: "3 anúncios" })).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("?tipo=procurando");
     screen
@@ -255,7 +264,7 @@ describe("abas Todos / Procurando / Vendendo", () => {
       .filter((card) => !card.closest("section"))
       .forEach((card) => expect(within(card).queryByText("Vendendo")).not.toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: "Todos" }));
+    await userEvent.click(aba("Todos"));
     expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("?tipo=todos");
     expect(chamadas.some((chamada) => chamada.caminho === "/vitrine")).toBe(true);
@@ -266,7 +275,7 @@ describe("abas Todos / Procurando / Vendendo", () => {
     const { roteador } = renderizarAplicacao({ rota: "/?tipo=vendendo&q=bike&ordenar=recentes", usuario });
 
     expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Vendendo" })).toHaveAttribute("aria-pressed", "true");
+    expect(aba("Vendendo")).toHaveAttribute("aria-pressed", "true");
 
     await userEvent.click(await screen.findByRole("button", { name: "Esportes" }));
     expect(await screen.findByRole("heading", { name: "1 anúncio" })).toBeInTheDocument();
@@ -293,9 +302,62 @@ describe("abas Todos / Procurando / Vendendo", () => {
     const { roteador } = renderizarAplicacao({ usuario });
 
     expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Vendendo" }));
+    await userEvent.click(aba("Vendendo"));
 
     expect(await screen.findByRole("heading", { name: "Nenhum anúncio encontrado" })).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("?tipo=vendendo");
+  });
+});
+
+describe("trilha de categorias e métricas do hero", () => {
+  const vitrine = [produto("p1", "PS5 Slim"), produto("p2", "Bike Scott", { categoria: "esportes", categoria_nome: "Esportes" })];
+  const categorias = () => within(screen.getByRole("group", { name: "Categorias" }));
+  const metricas = () => within(screen.getByRole("region", { name: /Você anuncia o que quer/ }));
+
+  it("na demonstração, soma tudo em Todos e mostra as métricas do protótipo", async () => {
+    renderizarAplicacao();
+    await screen.findByRole("heading", { name: "9 anúncios" });
+
+    expect(await categorias().findByRole("button", { name: "Todos (9 anúncios)" })).toHaveAttribute("aria-pressed", "true");
+    expect(metricas().getByText("2.847")).toBeInTheDocument();
+    expect(metricas().getByText("314")).toBeInTheDocument();
+    expect(metricas().getByText("18,4k")).toBeInTheDocument();
+    expect(metricas().getByText("cidades cobertas")).toBeInTheDocument();
+  });
+
+  it("com a API, conta por categoria respeitando a aba e a busca", async () => {
+    const chamadas = apiComFeed(3, vitrine, {
+      "GET /estatisticas": () => ({ corpo: { anuncios_ativos: 1520, cidades: 42, vendedores: 12345 } }),
+      "GET /anuncios/categorias": () => ({ corpo: [{ slug: "esportes", total: 3 }] }),
+      "GET /vitrine/categorias": () => ({
+        corpo: [
+          { slug: "games", total: 1 },
+          { slug: "esportes", total: 1 },
+        ],
+      }),
+    });
+    renderizarAplicacao({ rota: "/?q=bike", usuario });
+
+    expect(await categorias().findByRole("button", { name: "Todos (5 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Esportes (4 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Games (1 anúncio)" })).toBeInTheDocument();
+    expect(metricas().getByText("1.520")).toBeInTheDocument();
+    expect(metricas().getByText("42")).toBeInTheDocument();
+    expect(metricas().getByText("12,3k")).toBeInTheDocument();
+    expect(chamadas.find((chamada) => chamada.caminho === "/anuncios/categorias")?.parametros).toMatchObject({ q: "bike" });
+
+    await userEvent.click(aba("Procurando"));
+    expect(await categorias().findByRole("button", { name: "Todos (3 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Games (0 anúncios)" })).toBeInTheDocument();
+  });
+
+  it("sem as rotas no backend, os chips ficam sem número e o hero usa a demonstração", async () => {
+    apiComFeed(2);
+    renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(await metricas().findByText("2.847")).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Todos" })).toBeInTheDocument();
+    expect(await categorias().findByRole("button", { name: "Esportes" })).toBeInTheDocument();
   });
 });

@@ -1,0 +1,15 @@
+/* Corpo do feed, abaixo da barra de filtros. */
+.corpo {
+  padding-block: var(--espaco-3) var(--espaco-5);
+}
+
+.blocos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+}
+
+.carregarMais {
+  display: flex;
+  justify-content: center;
+}

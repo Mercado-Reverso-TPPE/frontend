@@ -57,7 +57,14 @@
   border-left: 1px solid var(--borda-hero);
 }
 
+.metricaIcone {
+  margin-bottom: 2px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
 .metricaValor {
+  margin: 0;
   font-family: var(--fonte-titulo);
   font-size: var(--tamanho-preco);
   font-weight: var(--peso-bold);
@@ -354,5 +361,22 @@
 @media (max-width: 760px) {
   .filtrosExtras {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Em telas estreitas, as três métricas dividem a largura em vez de estourar. */
+@media (max-width: 640px) {
+  .metricas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .metrica {
+    padding-inline: var(--espaco-1);
+  }
+
+  .metricaRotulo {
+    overflow-wrap: anywhere;
   }
 }

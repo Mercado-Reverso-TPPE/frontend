@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { FiltrosDoFeed, TipoDoFeed } from "@/api/anuncios";
+import { FILTROS_PADRAO, type FiltrosDoFeed, type TipoDoFeed } from "@/api/anuncios";
+import { contarPorCategoria } from "@/api/estatisticas";
 import { listarCategorias, RAIO_MAXIMO_KM } from "@/api/meusAnuncios";
 import { Botao, Campo } from "@/componentes/base";
 import { fmtPlural } from "@/utils/formato";
@@ -23,6 +24,8 @@ interface BarraDeFiltrosProps {
   aoAlterar: (mudancas: Partial<FiltrosDoFeed>) => void;
   temFiltroAtivo: boolean;
   aoLimpar: () => void;
+  /** Contar por categoria só quando o feed pode buscar (com a API, exige sessão e localização). */
+  habilitarContagem?: boolean;
 }
 
 /**
@@ -30,8 +33,23 @@ interface BarraDeFiltrosProps {
  * Vendendo), categoria, faixa de preço e distância máxima. Todos combinam
  * entre si e com a ordenação.
  */
-export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo, aoLimpar }: BarraDeFiltrosProps) {
+export function BarraDeFiltros({
+  filtros,
+  resultados,
+  aoAlterar,
+  temFiltroAtivo,
+  aoLimpar,
+  habilitarContagem = true,
+}: BarraDeFiltrosProps) {
   const categorias = useQuery({ queryKey: ["categorias"], queryFn: listarCategorias, staleTime: Infinity });
+  // A contagem ignora a categoria escolhida: os chips mostram quanto há em cada uma.
+  const semCategoria = { ...filtros, categoria: "", ordenacao: FILTROS_PADRAO.ordenacao };
+  const contagem = useQuery({
+    queryKey: ["anuncios", "contagem-por-categoria", semCategoria],
+    queryFn: ({ signal }) => contarPorCategoria(semCategoria, { sinal: signal }),
+    enabled: habilitarContagem,
+    retry: false,
+  });
   const [minimo, setMinimo] = useState(valorParaCampo(filtros.precoMin));
   const [maximo, setMaximo] = useState(valorParaCampo(filtros.precoMax));
   const [erroDePreco, setErroDePreco] = useState<string>();
@@ -88,6 +106,7 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo,
         <ChipsCategoria
           categorias={categorias.data ?? []}
           ativa={filtros.categoria}
+          contagem={contagem.data}
           aoSelecionar={(categoria) => aoAlterar({ categoria })}
         />
 

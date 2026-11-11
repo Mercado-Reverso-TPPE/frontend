@@ -2,10 +2,8 @@ import { fmtMetrica } from "@/utils/formato";
 import estilos from "./Feed.module.css";
 
 /**
- * Faixa de abertura do feed com a assinatura da marca.
- *
- * As métricas chegam por props; hoje o feed passa os números de
- * demonstração e, com a API integrada, passará os reais.
+ * Faixa de abertura do feed com a assinatura da marca e as métricas
+ * públicas da plataforma (anúncios ativos, cidades cobertas e vendedores).
  */
 export interface MetricaDoHero {
   icone: string;
@@ -31,10 +29,10 @@ export function Hero({ metricas }: { metricas: MetricaDoHero[] }) {
         <dl className={estilos.metricas}>
           {metricas.map((metrica) => (
             <div className={estilos.metrica} key={metrica.rotulo}>
-              <div style={{ fontSize: 18, marginBottom: 2 }} aria-hidden="true">
+              <div className={estilos.metricaIcone} aria-hidden="true">
                 {metrica.icone}
               </div>
-              <dd className={estilos.metricaValor} style={{ margin: 0 }}>
+              <dd className={estilos.metricaValor}>
                 {fmtMetrica(metrica.valor)}
               </dd>
               <dt className={estilos.metricaRotulo}>{metrica.rotulo}</dt>
