@@ -290,15 +290,52 @@ export interface FiltrosDoHistorico {
   status?: Exclude<StatusDaNegociacao, "em_andamento">;
 }
 
+/** Totais do histórico para os filtros pedidos. */
+export interface ResumoDoHistorico {
+  concluidas: number;
+  /** Soma do valor final das negociações concluídas. */
+  volume: number;
+  total: number;
+}
+
+export interface PaginaDoHistorico extends Pagina<Negociacao> {
+  /** Totais vindos da API, quando ela os envia (`resumo`); senão, a tela soma o que carregou. */
+  resumo?: ResumoDoHistorico;
+}
+
+interface ResumoDaApi {
+  concluidas: number;
+  volume: string | number;
+  total: number;
+}
+
 export async function listarHistorico(
   filtros: FiltrosDoHistorico = {},
   cursor?: string | null,
-): Promise<Pagina<Negociacao>> {
+): Promise<PaginaDoHistorico> {
   if (!apiConfigurada()) return vazia();
-  const resposta = await api.get<RespostaPaginada<NegociacaoDaApi>>("/historico", {
+  const resposta = await api.get<RespostaPaginada<NegociacaoDaApi> & { resumo?: ResumoDaApi }>("/historico", {
     parametros: { papel: filtros.papel, status: filtros.status, cursor: cursor ?? undefined },
   });
-  return paginaDe(resposta, negociacaoDaApi);
+  const pagina: PaginaDoHistorico = paginaDe(resposta, negociacaoDaApi);
+  if (resposta.resumo) {
+    pagina.resumo = {
+      concluidas: Number(resposta.resumo.concluidas),
+      volume: Number(resposta.resumo.volume),
+      total: Number(resposta.resumo.total),
+    };
+  }
+  return pagina;
+}
+
+/** Totais calculados sobre as negociações já carregadas. */
+export function resumirHistorico(negociacoes: Negociacao[]): ResumoDoHistorico {
+  const concluidas = negociacoes.filter((negociacao) => negociacao.status === "concluida");
+  return {
+    concluidas: concluidas.length,
+    volume: concluidas.reduce((soma, negociacao) => soma + negociacao.valorFinal, 0),
+    total: negociacoes.length,
+  };
 }
 
 export async function obterHistorico(id: string): Promise<NegociacaoDetalhada> {
