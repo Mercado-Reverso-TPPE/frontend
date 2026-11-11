@@ -1,0 +1,113 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+}
+
+.rotulo {
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-semibold);
+  color: var(--texto-primario);
+}
+
+.areaDrop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-1);
+  padding: var(--espaco-3) var(--espaco-2);
+  border: 2px dashed var(--borda);
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--transicao-padrao), background-color var(--transicao-padrao);
+}
+
+.areaDrop:hover,
+.areaDrop:focus-visible,
+.arrastando {
+  border-color: var(--laranja);
+  background-color: var(--laranja-claro);
+  outline: none;
+}
+
+.iconeCamera {
+  color: var(--texto-secundario);
+  margin-bottom: 2px;
+}
+
+.textoPrincipal {
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-semibold);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-primario);
+}
+
+.textoFormatos {
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.dica {
+  margin: 0;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.inputOculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.previaContainer {
+  position: relative;
+  display: inline-block;
+  max-width: 280px;
+  border-radius: var(--raio-card);
+  overflow: hidden;
+  border: 1px solid var(--borda);
+}
+
+.imagemPrevia {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.botaoRemover {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transicao-padrao);
+}
+
+.botaoRemover:hover {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.erro {
+  margin: 0;
+  font-size: var(--tamanho-meta);
+  color: var(--erro-texto);
+}

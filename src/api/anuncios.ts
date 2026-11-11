@@ -68,6 +68,9 @@ function anuncioDeDemo(anuncio: BuyerAd, indice = 0): Anuncio {
     uf,
     criadoEm: new Date(Date.UTC(2026, 9, 20 - indice)).toISOString(),
     distanciaKm: anuncio.distance,
+    estadoConservacao: anuncio.conditionWanted ? [anuncio.conditionWanted] : [],
+    foto: null,
+    urgente: Boolean(anuncio.urgent),
   };
 }
 
