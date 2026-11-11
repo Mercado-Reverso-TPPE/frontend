@@ -1,0 +1,32 @@
+/* O tamanho chega em --logo-tamanho (px); o resto deriva dele. */
+.logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+}
+
+.icone {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--logo-tamanho);
+  height: var(--logo-tamanho);
+  border-radius: calc(var(--logo-tamanho) * 0.26);
+  background-color: var(--laranja);
+  color: var(--texto-invertido);
+}
+
+.palavra {
+  font-family: var(--fonte-titulo);
+  font-size: calc(var(--logo-tamanho) * 0.62);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.6px;
+  color: var(--texto-primario);
+}
+
+.ponto {
+  color: var(--laranja);
+}

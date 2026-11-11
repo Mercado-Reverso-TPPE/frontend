@@ -57,7 +57,14 @@
   border-left: 1px solid var(--borda-hero);
 }
 
+.metricaIcone {
+  margin-bottom: 2px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
 .metricaValor {
+  margin: 0;
   font-family: var(--fonte-titulo);
   font-size: var(--tamanho-preco);
   font-weight: var(--peso-bold);

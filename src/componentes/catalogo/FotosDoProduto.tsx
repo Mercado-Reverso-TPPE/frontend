@@ -54,7 +54,7 @@ export function FotosDoProduto({ produto }: { produto: Produto }) {
       </p>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       {produto.fotos.length > 0 && (
-        <ul className={negociacaoEstilos.linha} style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul className={`${negociacaoEstilos.linha} ${negociacaoEstilos.listaSemMarcador}`}>
           {produto.fotos.map((foto, indice) => (
             <li key={foto.id} className={negociacaoEstilos.eventoCorpo}>
               {foto.url ? (
