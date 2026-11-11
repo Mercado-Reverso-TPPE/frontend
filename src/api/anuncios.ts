@@ -101,7 +101,8 @@ function anuncioDeDemo(anuncio: BuyerAd, indice = 0): Anuncio {
   };
 }
 
-const demandasDemo = () =>
+/** Pedidos de demonstração no formato da API. */
+export const listarDemandasDeDemo = () =>
   ALL_ADS.filter((anuncio): anuncio is BuyerAd => anuncio.kind === "buyer").map(anuncioDeDemo);
 
 /**
@@ -139,7 +140,7 @@ export async function listarFeed(
 ): Promise<PaginaDoFeed> {
   if (!apiConfigurada()) {
     await esperar();
-    const todos = filtrarDemandas(demandasDemo(), filtros);
+    const todos = filtrarDemandas(listarDemandasDeDemo(), filtros);
     const inicio = cursor ? Number(cursor) : 0;
     const fim = inicio + tamanho;
     return { itens: todos.slice(inicio, fim), total: todos.length, proximo: fim < todos.length ? String(fim) : null };
@@ -177,7 +178,7 @@ export async function listarFeed(
 export async function listarRecomendacoes(): Promise<Anuncio[]> {
   if (apiConfigurada()) return [];
   await esperar();
-  return filtrarDemandas(demandasDemo(), { ...FILTROS_PADRAO, ordenacao: "recentes" }).slice(0, 6);
+  return filtrarDemandas(listarDemandasDeDemo(), { ...FILTROS_PADRAO, ordenacao: "recentes" }).slice(0, 6);
 }
 
 /** Um anúncio de "procura-se" visível para quem está logado. */

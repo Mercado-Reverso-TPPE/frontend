@@ -13,7 +13,8 @@ import {
 } from "@/componentes/feed";
 import type { MetricaDoHero } from "@/componentes/feed";
 import { ErroAoCarregar, EsqueletoDeAnuncios, EstadoVazio } from "@/componentes/estado";
-import { useFeed, usePertoDeVoce, useRecomendacoes } from "@/hooks/useAnuncios";
+import type { EstatisticasPublicas } from "@/api/estatisticas";
+import { useEstatisticas, useFeed, usePertoDeVoce, useRecomendacoes } from "@/hooks/useAnuncios";
 import { useFiltros } from "@/hooks/useFiltros";
 import { useSessao } from "@/hooks/useSessao";
 
@@ -25,11 +26,14 @@ import { useSessao } from "@/hooks/useSessao";
  * anúncios cujo raio alcança quem busca.
  */
 
-const METRICAS_DE_DEMONSTRACAO: MetricaDoHero[] = [
-  { icone: "📋", valor: 2847, rotulo: "anúncios ativos" },
-  { icone: "🏙️", valor: 314, rotulo: "cidades cobertas" },
-  { icone: "🤝", valor: 18400, rotulo: "vendedores" },
-];
+const metricasDoHero = (estatisticas?: EstatisticasPublicas): MetricaDoHero[] =>
+  estatisticas
+    ? [
+        { icone: "📋", valor: estatisticas.anunciosAtivos, rotulo: "anúncios ativos" },
+        { icone: "🏙️", valor: estatisticas.cidades, rotulo: "cidades cobertas" },
+        { icone: "🤝", valor: estatisticas.vendedores, rotulo: "vendedores" },
+      ]
+    : [];
 
 const CHAVE_DESCARTADAS = "quero.recomendacoes.descartadas";
 
@@ -79,17 +83,13 @@ export default function Feed() {
   const primeiroBloco = itens.slice(0, 6);
   const segundoBloco = itens.slice(6);
 
-  const metricas: MetricaDoHero[] = !comApi
-    ? METRICAS_DE_DEMONSTRACAO
-    : total !== undefined
-      ? [{ icone: "📋", valor: total, rotulo: "anúncios ao seu alcance" }]
-      : [];
+  const metricas = metricasDoHero(useEstatisticas());
 
   if (comApi && !podeBuscar && !verificando) {
     const retorno = encodeURIComponent(`${localizacao.pathname}${localizacao.search}`);
     return (
       <>
-        <Hero metricas={[]} />
+        <Hero metricas={metricas} />
         <div className="conteudo" style={{ paddingBlock: "var(--espaco-4)" }}>
           {semLocalizacao ? (
             <EstadoVazio
@@ -143,6 +143,7 @@ export default function Feed() {
         aoAlterar={alterar}
         temFiltroAtivo={temFiltroAtivo}
         aoLimpar={limpar}
+        habilitarContagem={podeBuscar}
       />
 
       <div className="conteudo" style={{ paddingBlock: "var(--espaco-3) var(--espaco-5)" }}>
