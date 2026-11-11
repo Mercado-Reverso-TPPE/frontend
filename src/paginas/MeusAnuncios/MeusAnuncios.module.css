@@ -47,6 +47,31 @@
   background-color: var(--fundo-elevado);
 }
 
+/* Ponto de status: a cor reforça o badge, que continua levando o rótulo. */
+.ponto {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--texto-terciario);
+}
+
+.ponto_ativo {
+  background-color: var(--sucesso);
+}
+
+.ponto_pausado {
+  background-color: var(--laranja);
+}
+
+.ponto_em_negociacao {
+  background-color: var(--info);
+}
+
+.encerrado {
+  opacity: 0.6;
+}
+
 .info {
   flex: 1;
   min-width: 220px;
@@ -97,6 +122,33 @@
   gap: var(--espaco-1);
 }
 
+.acoes .botaoOfertas {
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.acoes .botaoOfertas:hover {
+  background-color: var(--info-superficie);
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.acoes .botaoEncerrar {
+  border-color: transparent;
+  background-color: var(--erro-superficie);
+  color: var(--erro);
+}
+
+.acoes .botaoEncerrar:hover:not(:disabled) {
+  border-color: var(--erro);
+}
+
+.encerradoEm {
+  margin: 0;
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
 .carregarMais {
   display: flex;
   justify-content: center;
@@ -109,6 +161,17 @@
   }
 
   .item {
+    align-items: flex-start;
     padding: var(--espaco-2);
+  }
+
+  .ponto {
+    margin-top: 6px;
+  }
+
+  /* As ações descem para baixo do conteúdo, na largura toda. */
+  .acoes,
+  .encerradoEm {
+    flex-basis: 100%;
   }
 }
