@@ -28,7 +28,7 @@ Negociação integrada à API (QRO-12 a QRO-16): em `/negociacoes/:id` (`:id` é
 
 Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central com não lidas e preferências por canal (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico filtrável por papel e status, com detalhe de valores e mensagens.
 
-As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
+Telas e componentes usam CSS Modules sobre os tokens: nenhum `style={{…}}` traz cor, fonte ou espaçamento literal, e só a camada `api/` lê `dados/demo.ts` (e só quando `VITE_API_URL` está vazia). `src/testes/arquitetura.test.ts` quebra a suíte se alguma das duas regras voltar. Os estilos que ainda passam por `style` são medidas calculadas a partir de props (tamanho do avatar e do logotipo, largura do esqueleto), via variáveis CSS. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
 
@@ -178,7 +178,7 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 
 ## Limitações e próximas etapas
 
-- Migrar as telas exportadas do Figma dos estilos embutidos para os componentes-base e os tokens — é o que libera o tema escuro.
+- Expor o alternador de tema escuro: as telas já usam só tokens; falta revisar o contraste de cada uma na paleta escura.
 - Substituir os dados de demonstração por chamadas reais quando o contrato da API for publicado, começando pelo feed.
 - Recomendações: a interface convida a ofertar ou descarta (sem criar oferta), mas o endpoint ainda não existe no backend. Com a API ligada, o carrossel fica oculto.
 - Busca por cidade e cards "Vendendo" no feed ficaram de fora até a equipe definir essas regras.

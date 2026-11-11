@@ -34,6 +34,7 @@
   --texto-secundario: #666666;
   --texto-terciario: #999999;
   --texto-invertido: #FFFFFF;
+  --aviso-texto: #9A5B00;
 
   /* ── Superfícies e bordas (modo claro) ─────────────────── */
   --fundo: #FFFFFF;
@@ -136,6 +137,7 @@
   --texto-primario: #EDEDED;
   --texto-secundario: #A0A0A0;
   --texto-terciario: #707070;
+  --aviso-texto: #FFB340;
 
   --fundo: #0F0F0F;
   --fundo-elevado: #161616;

@@ -228,7 +228,7 @@ export default function MinhaLoja() {
               </div>
 
               {editando === produto.id && (
-                <div style={{ flexBasis: "100%" }}>
+                <div className={negociacaoEstilos.linhaInteira}>
                   <FormularioDeProduto
                     inicial={produto}
                     rotuloDoEnvio="Salvar produto"

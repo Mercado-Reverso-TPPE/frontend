@@ -327,6 +327,11 @@
   color: var(--info);
 }
 
+.compactoIcone {
+  font-size: 32px;
+  line-height: 1.2;
+}
+
 .compactoCorpo {
   padding: var(--espaco-1-5) 14px;
 }

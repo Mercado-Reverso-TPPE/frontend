@@ -115,7 +115,8 @@ export default function Avaliar() {
           </fieldset>
           {erroDaNota && (
             <p id="erro-da-nota" role="alert" className={negociacaoEstilos.meta}>
-              ⚠ {erroDaNota}
+              <span aria-hidden="true">⚠ </span>
+              {erroDaNota}
             </p>
           )}
           <Campo

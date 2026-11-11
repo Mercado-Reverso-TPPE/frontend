@@ -3,7 +3,7 @@ import { EstadoVazio } from "@/componentes/estado";
 /** Rota inexistente. */
 export default function NaoEncontrada() {
   return (
-    <div className="conteudo" style={{ paddingBlock: "var(--espaco-4)" }}>
+    <div className="conteudo conteudo-com-respiro">
       <EstadoVazio
         icone="🧭"
         titulo="Esta página não existe"
