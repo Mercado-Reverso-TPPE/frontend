@@ -73,3 +73,75 @@ export async function confirmarAlteracaoDeEmail(token: string): Promise<void> {
   }
   await api.post("/perfil/email/confirmar", { token });
 }
+
+export interface AvaliacaoDoPerfil {
+  id: string;
+  nota: number;
+  comentario: string;
+  autorNome: string;
+  autorIniciais?: string;
+  autorFoto?: string;
+  data: string;
+}
+
+export interface AvaliacaoDoPerfilDaApi {
+  id: string | number;
+  nota: number;
+  comentario: string;
+  autor_nome?: string;
+  autor_foto?: string;
+  criado_em?: string;
+}
+
+const AVALIACOES_DEMO_PADRAO: AvaliacaoDoPerfil[] = [
+  {
+    id: "av-1",
+    nota: 5,
+    comentario: "Excelente negociação, pontual e produto conforme o combinado!",
+    autorNome: "Diego M.",
+    data: "28/08/2026",
+  },
+  {
+    id: "av-2",
+    nota: 5,
+    comentario: "Muito atenciosa e rápida nas respostas. Recomendo a todos!",
+    autorNome: "Ana P.",
+    data: "15/08/2026",
+  },
+  {
+    id: "av-3",
+    nota: 4,
+    comentario: "Transação tranquila, tudo certo.",
+    autorNome: "Carlos M.",
+    data: "02/08/2026",
+  },
+];
+
+let avaliacoesDemo: AvaliacaoDoPerfil[] | null = null;
+
+export function definirAvaliacoesDemo(avaliacoes: AvaliacaoDoPerfil[] | null) {
+  avaliacoesDemo = avaliacoes;
+}
+
+export async function listarAvaliacoesDoPerfil(usuario?: User | null): Promise<AvaliacaoDoPerfil[]> {
+  if (!apiConfigurada()) {
+    if (avaliacoesDemo !== null) return avaliacoesDemo;
+    if (usuario && (usuario.reviews === 0 || usuario.rating === 0)) return [];
+    return AVALIACOES_DEMO_PADRAO;
+  }
+
+  try {
+    const res = await api.get<{ results?: AvaliacaoDoPerfilDaApi[] } | AvaliacaoDoPerfilDaApi[]>("/perfil/avaliacoes");
+    const lista = Array.isArray(res) ? res : (res.results ?? []);
+    return lista.map((item) => ({
+      id: String(item.id),
+      nota: Number(item.nota),
+      comentario: item.comentario ?? "",
+      autorNome: item.autor_nome ?? "Usuário",
+      autorFoto: item.autor_foto,
+      data: item.criado_em ? item.criado_em.slice(0, 10) : "",
+    }));
+  } catch {
+    return [];
+  }
+}

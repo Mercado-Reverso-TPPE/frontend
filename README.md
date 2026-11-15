@@ -24,7 +24,15 @@ Abas do feed: **Todos**, **Procurando** e **Vendendo** ficam em `?tipo=` e combi
 
 Trilha de categorias e métricas do hero: o primeiro chip é **Todos** e cada chip mostra quantos anúncios há na categoria para a aba, a busca e os filtros de preço e distância atuais (a categoria escolhida não entra na conta). O hero mostra anúncios ativos, cidades cobertas e vendedores. O front já consome `GET /estatisticas` (`{ anuncios_ativos, cidades, vendedores }`) e `GET /anuncios/categorias` e `GET /vitrine/categorias` (`[{ slug, total }]`, com os mesmos filtros do feed). Enquanto essas rotas respondem 404, o hero mostra os números de demonstração e os chips aparecem sem contagem.
 
-As demais telas exportadas do Figma continuam no ar com dados de demonstração e ainda carregam estilos embutidos; elas migram para os componentes-base e para a API nas issues de cada fluxo. Nenhuma tela representa transação persistida.
+Catálogo do vendedor integrado à API (QRO-08): cadastrar, editar e excluir produtos, mudar o status (disponível, reservado, vendido) e enviar fotos com os limites do backend (até 6, JPEG/PNG/WEBP, 5 MB cada), checados também antes do envio. Na oferta, só produtos disponíveis aparecem e escolher um preenche o formulário.
+
+Palpites e comparação integrados à API (QRO-10, QRO-11): o vendedor dá um palpite sem compromisso e pode ofertar com o mesmo valor; o comprador vê só a faixa agregada quando a API a libera. Em `/anuncios/:id/ofertas` o comprador ordena as ofertas e compara duas ou mais lado a lado; a lista só é pedida depois de confirmar que o anúncio é dele.
+
+Negociação integrada à API (QRO-12 a QRO-16): em `/negociacoes/:id` (`:id` é a oferta) ficam o histórico de valores, a contraproposta com justificativa, rodada e prazo, aceite e recusa com confirmação, e o chat, que fica somente leitura quando a API encerra a conversa. As ações mostradas seguem o estado que a API devolveu (`situacaoDaNegociacao` em `api/ofertas.ts`); limite de rodadas e expiração continuam com o backend. `/negociacoes/:id/concluir` cobre a conclusão bilateral e o cancelamento.
+
+Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central com não lidas e preferências por canal (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico com cartões de resumo (concluídas, volume e total), uma trilha única de filtros (Todos, Compras, Vendas, Encerradas) e valores com sinal (compra em laranja, venda em verde), com detalhe de valores e mensagens.
+
+Telas e componentes usam CSS Modules sobre os tokens: nenhum `style={{…}}` traz cor, fonte ou espaçamento literal, e só a camada `api/` lê `dados/demo.ts` (e só quando `VITE_API_URL` está vazia). `src/testes/arquitetura.test.ts` quebra a suíte se alguma das duas regras voltar. Os estilos que ainda passam por `style` são medidas calculadas a partir de props (tamanho do avatar e do logotipo, largura do esqueleto), via variáveis CSS. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
 
@@ -39,7 +47,11 @@ src/
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status
-│   ├── ofertas.ts       # ofertas do vendedor
+│   ├── ofertas.ts       # ofertas, contrapropostas, aceite/recusa e palpites
+│   ├── catalogo.ts      # produtos da loja e fotos
+│   ├── negociacoes.ts   # conversa, conclusão, histórico e avaliação
+│   ├── notificacoes.ts  # central, contagem e preferências
+│   ├── paginacao.ts     # cursor e página do DRF
 │   ├── consulta.ts      # QueryClient do TanStack Query
 │   └── tipos.ts         # tipos do domínio
 ├── componentes/
@@ -80,11 +92,12 @@ src/
 | `/anuncios/:id/ofertar` | Envio, edição e retirada da própria oferta | exige sessão |
 | `/minhas-ofertas` | Ofertas enviadas e o status de cada uma | exige sessão |
 | `/anuncios/:id/ofertas` | Ofertas recebidas e comparação | exige sessão |
-| `/anuncios/:id/ofertas/:ofertaId/contraproposta` | Contraproposta | exige sessão |
-| `/negociacoes/:id` | Chat da negociação | exige sessão |
-| `/negociacoes/:id/aceitar` · `/concluir` · `/avaliar` | Aceite, conclusão e avaliação | exige sessão |
-| `/notificacoes` | Central de notificações | exige sessão |
-| `/historico` | Negociações concluídas e canceladas | exige sessão |
+| `/negociacoes/:id` | Valores, contraproposta, aceite/recusa e chat da oferta `:id` | exige sessão |
+| `/negociacoes/:id/concluir` · `/avaliar` | Conclusão bilateral e avaliação | exige sessão |
+| `/notificacoes` | Central e preferências (`?aba=preferencias`) | exige sessão |
+| `/historico` · `/historico/:id` | Negociações concluídas e canceladas (`?filtro=compras\|vendas\|encerradas`), e o detalhe | exige sessão |
+
+`/anuncios/:id/ofertas/:ofertaId/contraproposta` e `/negociacoes/:id/aceitar` redirecionam para `/negociacoes/:id`.
 
 Rota privada sem sessão redireciona para `/entrar?retorno=<destino>`, e o destino original é restaurado depois de entrar (QRO-02). Só destinos internos são aceitos em `retorno`; qualquer outro volta para o feed. Rota inexistente cai na tela de "página não existe".
 
@@ -170,7 +183,7 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 
 ## Limitações e próximas etapas
 
-- Migrar as telas exportadas do Figma dos estilos embutidos para os componentes-base e os tokens — é o que libera o tema escuro.
+- Expor o alternador de tema escuro: as telas já usam só tokens; falta revisar o contraste de cada uma na paleta escura.
 - Substituir os dados de demonstração por chamadas reais quando o contrato da API for publicado, começando pelo feed.
 - Recomendações: a interface convida a ofertar ou descarta (sem criar oferta), mas o endpoint ainda não existe no backend. Com a API ligada, o carrossel fica oculto.
 - Busca por cidade e cards "Vendendo" no feed ficaram de fora até a equipe definir essas regras.
@@ -178,7 +191,11 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - O perfil não tem mais "categorias de interesse": o backend não guarda esse dado. Volta quando houver campo na API para as recomendações.
 - A foto do perfil é um link (`foto` é URL no backend); envio de arquivo depende de um endpoint de upload.
 - A prévia do alcance em `/anunciar` é um desenho proporcional, não um mapa. O mapa entra com Leaflet quando um fluxo precisar de geografia real.
-- "Ver ofertas" leva a `/anuncios/:id/ofertas`, que ainda usa dados de demonstração até a issue de ofertas recebidas.
-- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend); a escolha do produto na oferta vem com a issue do catálogo.
+- Fotos da oferta só entram copiadas de um produto do catálogo (assim funciona o backend).
+- A API não expõe `negociacao_id` na oferta nem na conversa. Conclusão e avaliação localizam a negociação pelo histórico e pelas notificações (`localizarNegociacao`); quando o campo existir, a oferta já o lê.
+- A comparação de ofertas não traz distância nem reputação do vendedor: o `OfertaSerializer` ainda não envia esses dados.
+- O limite de rodadas de contraproposta não vem na API; a tela mostra a rodada atual e a mensagem do backend quando o limite é atingido.
+- Sem `VITE_API_URL`, conversa, negociação, notificações e histórico ficam vazios ou avisam que dependem da API; só o catálogo tem demonstração em memória.
+- Os totais do histórico vêm de `resumo` na resposta de `GET /historico` quando o backend enviar (`{ concluidas, volume, total }`). Até lá, são somados no cliente sobre as páginas já carregadas, e a tela avisa quando há mais páginas.
+- "Meus anúncios" mostra a data de publicação no lugar da validade (o backend não tem prazo de expiração do anúncio) e usa `atualizado_em` como data de encerramento.
 - `GET /ofertas/meus` não traz o título do anúncio, então "Minhas ofertas" mostra o produto ou a descrição e um link para o anúncio.
-- Catálogo do vendedor (`/minha-loja`) existe como rota e estado vazio; o cadastro de produtos vem na issue do catálogo.

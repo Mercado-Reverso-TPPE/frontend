@@ -90,6 +90,9 @@ export default function MinhasOfertas() {
                 <Botao para={`/anuncios/${oferta.anuncioId}`} variante="secundario" tamanho="pequeno">
                   Ver anúncio
                 </Botao>
+                <Botao para={`/negociacoes/${oferta.id}`} variante="secundario" tamanho="pequeno">
+                  Negociação
+                </Botao>
                 {podeAlterarOferta(oferta.status) && (
                   <>
                     <Botao para={`/anuncios/${oferta.anuncioId}/ofertar`} variante="suave" tamanho="pequeno">

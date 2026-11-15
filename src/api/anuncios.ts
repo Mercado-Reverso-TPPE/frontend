@@ -98,6 +98,9 @@ function anuncioDeDemo(anuncio: BuyerAd, indice = 0): Anuncio {
     criadoEm: dataDeDemo(anuncio.timeAgo, indice),
     distanciaKm: anuncio.distance,
     compradorPublico: pessoaDeDemo(anuncio.buyer),
+    estadoConservacao: anuncio.conditionWanted ? [anuncio.conditionWanted] : [],
+    foto: null,
+    urgente: Boolean(anuncio.urgent),
   };
 }
 
