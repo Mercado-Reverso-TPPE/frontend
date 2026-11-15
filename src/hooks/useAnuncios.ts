@@ -5,13 +5,17 @@ import {
   listarRecomendacoes,
   type FiltrosDoFeed,
 } from "@/api/anuncios";
+import { listarItensDoFeed, type CursorDoFeed } from "@/api/feed";
 
-/** Feed paginado: cada "carregar mais" busca a página seguinte pelo cursor. */
+/**
+ * Feed paginado da aba escolhida: cada "carregar mais" busca a página
+ * seguinte de cada fonte pelo próprio cursor.
+ */
 export function useFeed(filtros: FiltrosDoFeed, habilitado = true) {
   return useInfiniteQuery({
     queryKey: ["anuncios", "feed", filtros],
-    queryFn: ({ pageParam, signal }) => listarFeed(filtros, { cursor: pageParam, sinal: signal }),
-    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) => listarItensDoFeed(filtros, { cursor: pageParam, sinal: signal }),
+    initialPageParam: {} as CursorDoFeed,
     getNextPageParam: (pagina) => pagina.proximo,
     enabled: habilitado,
   });

@@ -20,8 +20,8 @@ import { useSessao } from "@/hooks/useSessao";
 /**
  * Feed — tela inicial (QRO-07, QRO-09).
  *
- * Filtros e ordenação vivem na URL e combinam entre si; a lista carrega por
- * páginas. Com a API, o feed exige sessão e localização: o backend só mostra
+ * Aba (Todos / Procurando / Vendendo), filtros e ordenação vivem na URL e
+ * combinam entre si; a lista carrega por páginas. Com a API, o feed exige sessão e localização: o backend só mostra
  * anúncios cujo raio alcança quem busca.
  */
 
@@ -71,13 +71,13 @@ export default function Feed() {
   const recomendacoes = useRecomendacoes(podeBuscar && autenticado);
   const { descartadas, descartar } = useDescartadas();
 
-  const anuncios = feed.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const itens = feed.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
   const total = feed.data?.pages[0]?.total;
   const recomendados = (recomendacoes.data ?? []).filter(
     (anuncio) => !descartadas.includes(anuncio.id) && anuncio.comprador !== usuario?.id,
   );
-  const primeiroBloco = anuncios.slice(0, 6);
-  const segundoBloco = anuncios.slice(6);
+  const primeiroBloco = itens.slice(0, 6);
+  const segundoBloco = itens.slice(6);
 
   const metricas: MetricaDoHero[] = !comApi
     ? METRICAS_DE_DEMONSTRACAO
@@ -152,7 +152,7 @@ export default function Feed() {
           <ErroAoCarregar titulo="Não foi possível carregar o feed" erro={feed.error} aoTentarDeNovo={() => feed.refetch()} />
         )}
 
-        {feed.isSuccess && anuncios.length === 0 && (
+        {feed.isSuccess && itens.length === 0 && (
           <EstadoVazio
             titulo="Nenhum anúncio encontrado"
             descricao={
@@ -165,11 +165,11 @@ export default function Feed() {
           />
         )}
 
-        {anuncios.length > 0 && total !== undefined && (
+        {itens.length > 0 && total !== undefined && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-4)" }}>
             <div>
               <ResumoDaLista total={total} ordenacao={filtros.ordenacao} aoMudarOrdenacao={(ordenacao) => alterar({ ordenacao })} />
-              <GradeDeAnuncios anuncios={primeiroBloco} />
+              <GradeDeAnuncios itens={primeiroBloco} />
             </div>
 
             <Carrossel
@@ -182,7 +182,7 @@ export default function Feed() {
 
             {!autenticado && <FaixaDeConversao />}
 
-            <GradeDeAnuncios anuncios={segundoBloco} />
+            <GradeDeAnuncios itens={segundoBloco} />
 
             {feed.hasNextPage && (
               <div style={{ display: "flex", justifyContent: "center" }}>

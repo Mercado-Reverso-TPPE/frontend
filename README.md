@@ -20,6 +20,8 @@ Ofertas do vendedor integradas à API (QRO-06): enviar, editar e retirar enquant
 
 Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, distância máxima e ordenação combinam entre si e ficam na URL; a lista carrega por páginas; o detalhe volta ao feed com os mesmos filtros. Com a API ligada, o feed exige sessão e localização, porque o backend só devolve anúncios cujo raio alcança quem busca.
 
+Abas do feed: **Todos**, **Procurando** e **Vendendo** ficam em `?tipo=` e combinam com os demais filtros. "Procurando" lê `GET /anuncios`; "Vendendo" lê `GET /vitrine` (produtos à venda com foto, conservação, visualizações e `vendedor_publico`); "Todos" intercala os dois. Enquanto o backend não publica `/vitrine`, a aba "Vendendo" fica vazia. O card "Procurando" mostra o comprador quando o item traz `comprador_publico`.
+
 Catálogo do vendedor integrado à API (QRO-08): cadastrar, editar e excluir produtos, mudar o status (disponível, reservado, vendido) e enviar fotos com os limites do backend (até 6, JPEG/PNG/WEBP, 5 MB cada), checados também antes do envio. Na oferta, só produtos disponíveis aparecem e escolher um preenche o formulário.
 
 Palpites e comparação integrados à API (QRO-10, QRO-11): o vendedor dá um palpite sem compromisso e pode ofertar com o mesmo valor; o comprador vê só a faixa agregada quando a API a libera. Em `/anuncios/:id/ofertas` o comprador ordena as ofertas e compara duas ou mais lado a lado; a lista só é pedida depois de confirmar que o anúncio é dele.

@@ -28,8 +28,9 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--laranja), #F59A5B);
+  height: 4px;
+  border-radius: 14px 14px 0 0;
+  background: var(--gradiente-destaque);
 }
 
 .topo {
@@ -120,6 +121,7 @@
 }
 
 .divisoria {
+  margin-top: auto;
   height: 1px;
   background-color: var(--superficie-suave);
 }
@@ -182,6 +184,7 @@
   position: relative;
   z-index: 1;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .card:hover .acao,
@@ -195,6 +198,7 @@
 .cardVenda {
   flex-direction: row;
   gap: 0;
+  height: 100%;
   padding: 0;
   min-height: 190px;
 }
@@ -205,20 +209,22 @@
   bottom: 0;
   left: 0;
   width: 3px;
-  background: linear-gradient(180deg, var(--laranja), #F59A5B);
+  background: var(--gradiente-destaque-vertical);
   z-index: 2;
 }
 
 .foto {
   position: relative;
-  width: 190px;
-  min-width: 190px;
+  width: 38%;
+  max-width: 190px;
   flex-shrink: 0;
   background-color: var(--superficie);
   overflow: hidden;
 }
 
 .foto img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -228,6 +234,17 @@
 
 .card:hover .foto img {
   transform: scale(1.04);
+}
+
+.fotoVazia {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  background-color: var(--superficie);
+  border-right: 1px solid var(--borda-suave);
 }
 
 .conservacao {
@@ -368,7 +385,7 @@
 
   .foto {
     width: 100%;
-    min-width: 0;
+    max-width: none;
     height: 170px;
   }
 }

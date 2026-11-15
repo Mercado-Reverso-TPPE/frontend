@@ -18,18 +18,23 @@ const anuncio: Anuncio = {
   ofertasRecebidas: 3,
   cidade: "Brasília",
   uf: "DF",
-  criadoEm: "2026-10-20T15:00:00Z",
+  criadoEm: new Date(Date.now() - 12 * 60000).toISOString(),
   distanciaKm: 3.2,
 };
 
+const comprador = { id: "c1", nome: "Carlos Mendes", foto: null, nota: 4.8, avaliacoes: 23 };
+
 describe("CardProcurando", () => {
-  it("mostra demanda, orçamento e distância em KM", () => {
+  it("mostra demanda, orçamento compacto, local e distância em KM", () => {
     renderizar(<CardProcurando anuncio={anuncio} />);
 
     expect(screen.getByRole("link", { name: anuncio.titulo })).toHaveAttribute("href", "/anuncios/a1");
     expect(screen.getByText("Procurando")).toBeInTheDocument();
+    expect(screen.getByText("Esportes")).toBeInTheDocument();
+    expect(screen.getByText("12 min")).toBeInTheDocument();
+    expect(screen.getByText("Orçamento")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1,2k — R$ 2,5k")).toBeInTheDocument();
     expect(screen.getByText("3,2 km")).toBeInTheDocument();
-    expect(screen.getByText("R$ 1.200 a R$ 2.500")).toBeInTheDocument();
     expect(screen.getByText("Brasília, DF", { exact: false })).toBeInTheDocument();
   });
 
@@ -46,5 +51,22 @@ describe("CardProcurando", () => {
     renderizar(<CardProcurando anuncio={{ ...anuncio, precoMin: null, precoMax: null }} />);
 
     expect(screen.getByText("A combinar")).toBeInTheDocument();
+  });
+
+  it("mostra o comprador com nome curto, iniciais e nota quando a API envia", () => {
+    renderizar(<CardProcurando anuncio={{ ...anuncio, compradorPublico: comprador }} />);
+
+    expect(screen.getByText("Carlos M.")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Foto de Carlos M." })).toHaveTextContent("CM");
+    expect(screen.getByText("4,8")).toBeInTheDocument();
+    expect(screen.getByText("ofertas")).toBeInTheDocument();
+  });
+
+  it("sem o comprador, o rodapé fica só com a contagem de ofertas", () => {
+    renderizar(<CardProcurando anuncio={anuncio} />);
+
+    expect(screen.queryByRole("img", { name: /Foto de/ })).not.toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("ofertas")).toBeInTheDocument();
   });
 });
