@@ -71,10 +71,17 @@
 
 /* ── Esqueleto ──────────────────────────────── */
 .esqueleto {
+  display: block;
+  width: var(--esqueleto-largura, 100%);
+  height: var(--esqueleto-altura, 14px);
   background: linear-gradient(90deg, var(--superficie) 25%, var(--superficie-suave) 37%, var(--superficie) 63%);
   background-size: 400% 100%;
   border-radius: var(--raio-botao);
   animation: brilhar 1400ms ease infinite;
+}
+
+.esqueletoArredondado {
+  border-radius: var(--raio-chip);
 }
 
 .grade {

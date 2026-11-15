@@ -31,10 +31,10 @@ export function Hero({ metricas }: { metricas: MetricaDoHero[] }) {
         <dl className={estilos.metricas}>
           {metricas.map((metrica) => (
             <div className={estilos.metrica} key={metrica.rotulo}>
-              <div style={{ fontSize: 18, marginBottom: 2 }} aria-hidden="true">
+              <div className={estilos.metricaIcone} aria-hidden="true">
                 {metrica.icone}
               </div>
-              <dd className={estilos.metricaValor} style={{ margin: 0 }}>
+              <dd className={estilos.metricaValor}>
                 {fmtMetrica(metrica.valor)}
               </dd>
               <dt className={estilos.metricaRotulo}>{metrica.rotulo}</dt>

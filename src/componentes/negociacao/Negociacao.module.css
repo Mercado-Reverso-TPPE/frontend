@@ -316,3 +316,15 @@
     max-width: 90%;
   }
 }
+
+/* Lista sem marcador nem recuo (fotos do produto). */
+.listaSemMarcador {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ocupa a linha inteira dentro de um item flex (formulário de edição). */
+.linhaInteira {
+  flex-basis: 100%;
+}
