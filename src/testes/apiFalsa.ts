@@ -16,8 +16,20 @@ export interface ChamadaRegistrada {
 
 type Manipulador = (corpo: unknown, chamada: ChamadaRegistrada) => RespostaFalsa;
 
-const ROTA_DO_SINO = "GET /notificacoes/nao-lidas";
-const ROTA_AVALIACOES = "GET /perfil/avaliacoes";
+/**
+ * Rotas que a tela consulta sozinha (sino do cabeçalho, avaliações do perfil,
+ * métricas e contagens do feed, vitrine). Quando o teste não as define, elas
+ * respondem vazias e não entram em `chamadas`, para os testes contarem só o
+ * que a tela pediu.
+ */
+const EM_SEGUNDO_PLANO: [RegExp, RespostaFalsa][] = [
+  [/^GET \/notificacoes\/nao-lidas$/, { corpo: { nao_lidas: 0 } }],
+  [/^GET \/usuarios\/[^/]+\/avaliacoes$/, { corpo: { next: null, previous: null, results: [] } }],
+  [/^GET \/estatisticas$/, { corpo: { anuncios_ativos: 0, cidades: 0, vendedores: 0 } }],
+  // Sem contagem definida pelo teste, a consulta falha e os chips aparecem sem número.
+  [/^GET \/(anuncios|vitrine)\/categorias$/, { status: 503, corpo: { detail: "Indisponível." } }],
+  [/^GET \/vitrine$/, { corpo: { count: 0, next: null, results: [] } }],
+];
 
 /**
  * Liga `VITE_API_URL` e troca o `fetch` por um backend em memória.
@@ -38,14 +50,10 @@ export function simularApi(rotas: Record<string, Manipulador>) {
       parametros: Object.fromEntries(endereco.searchParams),
     };
     const rota = `${chamada.metodo} ${chamada.caminho}`;
-    // O sino do cabeçalho e as avaliações do perfil consultam sozinhos em segundo plano;
-    // essas chamadas não entram em `chamadas`, para os testes contarem só o que a tela pediu.
-    const emSegundoPlano = (rota === ROTA_DO_SINO || rota === ROTA_AVALIACOES) && !rotas[rota];
-    if (!emSegundoPlano) chamadas.push(chamada);
+    const padrao = rotas[rota] ? undefined : EM_SEGUNDO_PLANO.find(([expressao]) => expressao.test(rota));
+    if (!padrao) chamadas.push(chamada);
 
-    const manipulador: Manipulador | undefined = emSegundoPlano
-      ? () => ({ corpo: rota === ROTA_DO_SINO ? { nao_lidas: 0 } : [] })
-      : rotas[rota];
+    const manipulador: Manipulador | undefined = padrao ? () => padrao[1] : rotas[rota];
     const { status = 200, corpo } = manipulador
       ? manipulador(chamada.corpo, chamada)
       : { status: 404, corpo: { detail: "Não encontrado." } };

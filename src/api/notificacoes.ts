@@ -4,10 +4,10 @@
  * `GET /notificacoes` (paginada por número de página), `GET /notificacoes/nao-lidas`,
  * `PATCH /notificacoes/:id/lida` e `GET/PATCH /preferencias/notificacoes`.
  * O agrupamento de eventos parecidos e os lembretes de prazo são feitos pelo
- * backend; a tela só mostra o que chega. Sem `VITE_API_URL` a central fica vazia.
+ * backend; a tela só mostra o que chega.
  */
 
-import { api, apiConfigurada, ErroDeApi } from "./cliente";
+import { api } from "./cliente";
 import { paginaDe, type Pagina, type RespostaPaginada } from "./paginacao";
 
 /** Tipos de `notificacoes/catalogo.py`, na mesma ordem. */
@@ -135,7 +135,6 @@ export function visualDaNotificacao(notificacao: Pick<Notificacao, "tipo" | "tit
 }
 
 export async function listarNotificacoes(pagina: number | string | null = 1): Promise<Pagina<Notificacao>> {
-  if (!apiConfigurada()) return { itens: [], proximo: null };
   const resposta = await api.get<RespostaPaginada<NotificacaoDaApi>>("/notificacoes", {
     parametros: { page: pagina ?? 1 },
   });
@@ -143,26 +142,20 @@ export async function listarNotificacoes(pagina: number | string | null = 1): Pr
 }
 
 export async function contarNaoLidas(): Promise<number> {
-  if (!apiConfigurada()) return 0;
   const resposta = await api.get<{ nao_lidas: number }>("/notificacoes/nao-lidas");
   return resposta.nao_lidas ?? 0;
 }
 
 export async function marcarComoLida(id: string): Promise<Notificacao> {
-  if (!apiConfigurada()) throw new ErroDeApi("Notificações dependem da API.", { codigo: "sem-api" });
   return notificacaoDaApi(await api.patch<NotificacaoDaApi>(`/notificacoes/${id}/lida`));
 }
 
 export async function obterPreferencias(): Promise<Preferencia[]> {
-  if (!apiConfigurada()) {
-    return TIPOS_DE_NOTIFICACAO.flatMap(({ tipo }) => CANAIS.map(({ canal }) => ({ tipo, canal, habilitada: true })));
-  }
   const resposta = await api.get<{ preferencias: Preferencia[] }>("/preferencias/notificacoes");
   return resposta.preferencias;
 }
 
 export async function salvarPreferencias(preferencias: Preferencia[]): Promise<Preferencia[]> {
-  if (!apiConfigurada()) throw new ErroDeApi("Preferências dependem da API.", { codigo: "sem-api" });
   const resposta = await api.patch<{ preferencias: Preferencia[] }>("/preferencias/notificacoes", { preferencias });
   return resposta.preferencias;
 }

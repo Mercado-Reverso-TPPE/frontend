@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { usuarioDoPerfil } from "@/api/autenticacao";
-import { definirAvaliacoesDemo } from "@/api/perfil";
 import { perfilDeTeste, simularApi } from "../apiFalsa";
 import { renderizarAplicacao } from "../utilitarios";
 
@@ -14,15 +13,24 @@ function secao(nome: string) {
 
 describe("perfil", () => {
   it("mostra os dados no modo de visualização com resumo e informações pessoais", async () => {
-    definirAvaliacoesDemo([
-      {
-        id: "av-1",
-        nota: 5,
-        comentario: "Excelente vendedor!",
-        autorNome: "Carlos M.",
-        data: "2026-08-01",
-      },
-    ]);
+    simularApi({
+      [`GET /usuarios/${usuario.id}/avaliacoes`]: () => ({
+        corpo: {
+          next: null,
+          previous: null,
+          results: [
+            {
+              id: "av-1",
+              nota: 5,
+              comentario: "Excelente vendedor!",
+              autor_nome: "Carlos M.",
+              publicada_em: "2026-08-01T15:00:00Z",
+              criada_em: "2026-07-30T15:00:00Z",
+            },
+          ],
+        },
+      }),
+    });
 
     renderizarAplicacao({ rota: "/perfil", usuario });
 
@@ -57,7 +65,7 @@ describe("perfil", () => {
   });
 
   it("exibe estado vazio quando não há avaliações", async () => {
-    definirAvaliacoesDemo([]);
+    simularApi({});
     renderizarAplicacao({ rota: "/perfil", usuario });
 
     const avaliacoes = secao("Avaliações recebidas");
