@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { usuarioDoPerfil } from "@/api/autenticacao";
-import { destinoDaNotificacao, type Notificacao } from "@/api/notificacoes";
+import { destinoDaNotificacao, visualDaNotificacao, type Notificacao } from "@/api/notificacoes";
 import { perfilDeTeste, simularApi } from "../apiFalsa";
 import { renderizarAplicacao } from "../utilitarios";
 
@@ -183,15 +183,30 @@ describe("notificações", () => {
     expect(ler({ tipo: "anuncio_compativel", ofertaId: null })).toBe("/anuncios/a1");
   });
 
-  it("lista o histórico, destaca as não lidas e marca como lida ao abrir", async () => {
+  it("lista em cartões, destaca as não lidas e marca como lida ao abrir", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-22T12:20:00Z") });
+    let naoLidas = 1;
     const chamadas = simularApi({
       "GET /notificacoes": () => ({
         corpo: {
           next: null,
-          results: [notificacao(), notificacao({ id: "nt2", titulo: "Oferta aceita", lida_em: "2026-10-21T00:00:00Z" })],
+          results: [
+            notificacao(),
+            notificacao({
+              id: "nt2",
+              tipo: "negociacao_atualizada",
+              titulo: "Oferta aceita",
+              criada_em: "2026-10-21T12:00:00Z",
+              lida_em: "2026-10-21T13:00:00Z",
+            }),
+          ],
         },
       }),
-      "PATCH /notificacoes/nt1/lida": () => ({ corpo: notificacao({ lida_em: "2026-10-23T00:00:00Z" }) }),
+      "GET /notificacoes/nao-lidas": () => ({ corpo: { nao_lidas: naoLidas } }),
+      "PATCH /notificacoes/nt1/lida": () => {
+        naoLidas = 0;
+        return { corpo: notificacao({ lida_em: "2026-10-23T00:00:00Z" }) };
+      },
       "GET /ofertas/o1": () => ({ status: 404, corpo: { detail: "Não encontrado." } }),
       "GET /conversas": () => ({ corpo: { next: null, results: [] } }),
     });
@@ -199,12 +214,66 @@ describe("notificações", () => {
 
     const nova = within((await screen.findByRole("heading", { name: "Nova contraproposta" })).closest("li")!);
     expect(nova.getByText("Não lida")).toBeInTheDocument();
-    expect(within(screen.getByRole("heading", { name: "Oferta aceita" }).closest("li")!).queryByText("Não lida")).not.toBeInTheDocument();
-    expect(screen.getByText("1 não lida")).toBeInTheDocument();
+    expect(nova.getByText("💱")).toBeInTheDocument();
+    expect(nova.getByText("há 20 min")).toBeInTheDocument();
+    const aceita = within(screen.getByRole("heading", { name: "Oferta aceita" }).closest("li")!);
+    expect(aceita.queryByText("Não lida")).not.toBeInTheDocument();
+    expect(aceita.getByText("✓")).toBeInTheDocument();
+    expect(aceita.getByText("há 1 dia")).toBeInTheDocument();
+    expect(await screen.findByText("1 não lida")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Notificações, 1 não lidas" })).toBeInTheDocument();
 
-    await userEvent.click(nova.getByRole("button", { name: "Abrir" }));
+    await userEvent.click(nova.getByRole("button", { name: "Nova contraproposta" }));
     await waitFor(() => expect(roteador.state.location.pathname).toBe("/negociacoes/o1"));
     expect(chamadas.some((chamada) => chamada.metodo === "PATCH" && chamada.caminho === "/notificacoes/nt1/lida")).toBe(true);
+    await waitFor(() => expect(screen.getByRole("link", { name: "Notificações" })).toBeInTheDocument());
+    vi.useRealTimers();
+  });
+
+  it("marcar todas como lidas zera o contador do sino", async () => {
+    const lidas = new Set<string>();
+    simularApi({
+      "GET /notificacoes": () => ({
+        corpo: {
+          next: null,
+          results: ["nt1", "nt2", "nt3"].map((id) =>
+            notificacao({ id, titulo: `Aviso ${id}`, lida_em: lidas.has(id) ? "2026-10-23T00:00:00Z" : null }),
+          ),
+        },
+      }),
+      "GET /notificacoes/nao-lidas": () => ({ corpo: { nao_lidas: 3 - lidas.size } }),
+      ...Object.fromEntries(
+        ["nt1", "nt2", "nt3"].map((id) => [
+          `PATCH /notificacoes/${id}/lida`,
+          () => {
+            lidas.add(id);
+            return { corpo: notificacao({ id, lida_em: "2026-10-23T00:00:00Z" }) };
+          },
+        ]),
+      ),
+    });
+    renderizarAplicacao({ rota: "/notificacoes", usuario: eu });
+
+    expect(await screen.findByText("3 não lidas")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Notificações, 3 não lidas" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Marcar todas como lidas" }));
+
+    expect(await screen.findByText("Tudo lido")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Notificações" })).toBeInTheDocument();
+    expect(screen.queryByText("Não lida")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Marcar todas como lidas" })).not.toBeInTheDocument();
+  });
+
+  it("mostra ícone e cor por tipo, inclusive aceite e recusa", () => {
+    const visual = (tipo: string, titulo = "") => visualDaNotificacao({ tipo, titulo });
+    expect(visual("oferta_recebida")).toEqual({ icone: "📦", tom: "laranja" });
+    expect(visual("contraproposta_recebida")).toEqual({ icone: "💱", tom: "lilas" });
+    expect(visual("mensagem_recebida")).toEqual({ icone: "💬", tom: "azul" });
+    expect(visual("negociacao_atualizada", "Oferta aceita")).toEqual({ icone: "✓", tom: "verde" });
+    expect(visual("negociacao_atualizada", "Oferta recusada")).toEqual({ icone: "✕", tom: "vermelho" });
+    expect(visual("negociacao_concluida").tom).toBe("verde");
+    expect(visual("avaliacao_recebida").icone).toBe("⭐");
   });
 
   it("salva preferências sem permitir desligar os avisos de segurança", async () => {
