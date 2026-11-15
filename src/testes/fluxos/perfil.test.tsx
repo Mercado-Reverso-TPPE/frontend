@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { usuarioDoPerfil } from "@/api/autenticacao";
+import { definirAvaliacoesDemo } from "@/api/perfil";
 import { perfilDeTeste, simularApi } from "../apiFalsa";
 import { renderizarAplicacao } from "../utilitarios";
 
@@ -12,20 +13,81 @@ function secao(nome: string) {
 }
 
 describe("perfil", () => {
-  it("mostra os dados atuais vindos da sessão", () => {
+  it("mostra os dados no modo de visualização com resumo e informações pessoais", async () => {
+    definirAvaliacoesDemo([
+      {
+        id: "av-1",
+        nota: 5,
+        comentario: "Excelente vendedor!",
+        autorNome: "Carlos M.",
+        data: "2026-08-01",
+      },
+    ]);
+
     renderizarAplicacao({ rota: "/perfil", usuario });
 
-    expect(screen.getByRole("heading", { name: "Meu perfil" })).toBeInTheDocument();
-    expect(secao("Dados pessoais").getByLabelText(/^Nome/)).toHaveValue("Joana da Silva");
-    expect(secao("Localização de referência").getByText("Brasília, DF · CEP 70000-000")).toBeInTheDocument();
-    expect(secao("E-mail").getByText("joana@exemplo.com")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Meu Perfil/i })).toBeInTheDocument();
+
+    // Resumo
+    const resumo = secao("Resumo do perfil");
+    expect(resumo.getByText("Joana da Silva")).toBeInTheDocument();
+    expect(resumo.getByText("Brasília, DF · CEP 70000-000")).toBeInTheDocument();
+    expect(resumo.getByText(/🔄 Comprador e Vendedor/)).toBeInTheDocument();
+    expect(resumo.getByText(/Membro desde Mar 2024/)).toBeInTheDocument();
+    expect(resumo.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+
+    // Informações pessoais em grade
+    const info = secao("Informações pessoais");
+    expect(info.getByText("NOME")).toBeInTheDocument();
+    expect(info.getByText("Joana da Silva")).toBeInTheDocument();
+    expect(info.getByText("TELEFONE")).toBeInTheDocument();
+    expect(info.getByText("(61) 99999-0000")).toBeInTheDocument();
+    expect(info.getByText("CIDADE")).toBeInTheDocument();
+    expect(info.getByText("Brasília")).toBeInTheDocument();
+    expect(info.getByText("ESTADO")).toBeInTheDocument();
+    expect(info.getByText("DF")).toBeInTheDocument();
+    expect(info.getByText("E-MAIL")).toBeInTheDocument();
+    expect(info.getByText("joana@exemplo.com")).toBeInTheDocument();
+
+    // Avaliações
+    const avaliacoes = secao("Avaliações recebidas");
+    expect(await avaliacoes.findByText("Carlos M.")).toBeInTheDocument();
+    expect(avaliacoes.getByText("Excelente vendedor!")).toBeInTheDocument();
+    expect(resumo.getByText(/4\.5 · 1 avaliações/)).toBeInTheDocument();
   });
 
-  it("salva os dados pessoais e atualiza o avatar do cabeçalho", async () => {
+  it("exibe estado vazio quando não há avaliações", async () => {
+    definirAvaliacoesDemo([]);
+    renderizarAplicacao({ rota: "/perfil", usuario });
+
+    const avaliacoes = secao("Avaliações recebidas");
+    expect(await avaliacoes.findByText("Ainda sem avaliações")).toBeInTheDocument();
+  });
+
+  it("permite alternar entre modo de visualização e edição com Cancelar", async () => {
+    renderizarAplicacao({ rota: "/perfil", usuario });
+
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Nome/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+    expect(secao("Dados pessoais").getByLabelText(/^Nome/)).toHaveValue("Joana da Silva");
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Nome/)).not.toBeInTheDocument();
+  });
+
+  it("salva os dados pessoais, volta para visualização e atualiza o avatar do cabeçalho", async () => {
     const chamadas = simularApi({
       "PATCH /perfil": (corpo) => ({ corpo: { ...perfilDeTeste, ...(corpo as object) } }),
     });
     renderizarAplicacao({ rota: "/perfil", usuario });
+
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const dados = secao("Dados pessoais");
 
     await userEvent.clear(dados.getByLabelText(/^Nome/));
@@ -33,12 +95,12 @@ describe("perfil", () => {
     await userEvent.type(dados.getByLabelText(/Link da foto/), "https://exemplo.com/joana.png");
     await userEvent.click(dados.getByRole("button", { name: "Salvar dados pessoais" }));
 
-    expect(await dados.findByText("Dados pessoais salvos.")).toBeInTheDocument();
     expect(chamadas[0]?.corpo).toEqual({
       nome: "Joana Prado",
       telefone: perfilDeTeste.telefone,
       foto: "https://exemplo.com/joana.png",
     });
+    expect(await screen.findByRole("button", { name: "Editar" })).toBeInTheDocument();
     const cabecalho = within(screen.getByRole("banner"));
     expect(cabecalho.getByRole("button", { name: /Joana/ })).toBeInTheDocument();
     expect(cabecalho.getByRole("img", { name: "Foto de Joana Prado" })).toHaveAttribute(
@@ -47,8 +109,9 @@ describe("perfil", () => {
     );
   });
 
-  it("só habilita salvar quando algo mudou", () => {
+  it("só habilita salvar quando algo mudou", async () => {
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(secao("Dados pessoais").getByRole("button", { name: "Salvar dados pessoais" })).toBeDisabled();
   });
@@ -56,10 +119,14 @@ describe("perfil", () => {
   it("atualiza a localização e reflete no menu da conta", async () => {
     simularApi({
       "PATCH /perfil": () => ({
-        corpo: { ...perfilDeTeste, localizacao: { ...perfilDeTeste.localizacao, cep: "", cidade: "Goiânia", uf: "GO" } },
+        corpo: {
+          ...perfilDeTeste,
+          localizacao: { ...perfilDeTeste.localizacao, cep: "", cidade: "Goiânia", uf: "GO" },
+        },
       }),
     });
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const local = secao("Localização de referência");
 
     await userEvent.clear(local.getByLabelText("CEP"));
@@ -68,17 +135,19 @@ describe("perfil", () => {
     await userEvent.selectOptions(local.getByLabelText("Estado"), "GO");
     await userEvent.click(local.getByRole("button", { name: "Salvar localização" }));
 
-    expect(await local.findByText("Localização atualizada.")).toBeInTheDocument();
-    expect(local.getByText("Goiânia, GO")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Joana/ }));
     expect(screen.getByRole("menu")).toHaveTextContent("Goiânia, GO");
   });
 
   it("informa falha de localização e mantém a localização anterior visível", async () => {
     simularApi({
-      "PATCH /perfil": () => ({ status: 400, corpo: ["Não foi possível localizar o CEP ou a cidade informada."] }),
+      "PATCH /perfil": () => ({
+        status: 400,
+        corpo: ["Não foi possível localizar o CEP ou a cidade informada."],
+      }),
     });
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const local = secao("Localização de referência");
 
     await userEvent.clear(local.getByLabelText("CEP"));
@@ -93,6 +162,7 @@ describe("perfil", () => {
   it("exige CEP ou cidade antes de enviar", async () => {
     const chamadas = simularApi({});
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const local = secao("Localização de referência");
 
     await userEvent.clear(local.getByLabelText("CEP"));
@@ -110,6 +180,7 @@ describe("troca de e-mail", () => {
       "POST /perfil/email": () => ({ status: 202, corpo: { detail: "Enviamos um link de confirmação." } }),
     });
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const email = secao("E-mail");
 
     await userEvent.click(email.getByRole("button", { name: "Alterar e-mail" }));
@@ -128,6 +199,7 @@ describe("troca de e-mail", () => {
       "POST /perfil/email": () => ({ status: 400, corpo: ["Este e-mail já está sendo usado por outra conta."] }),
     });
     renderizarAplicacao({ rota: "/perfil", usuario });
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
     const email = secao("E-mail");
 
     await userEvent.click(email.getByRole("button", { name: "Alterar e-mail" }));
@@ -149,12 +221,15 @@ describe("troca de e-mail", () => {
 
     await userEvent.click(await screen.findByRole("link", { name: "Voltar ao perfil" }));
     expect(roteador.state.location.pathname).toBe("/perfil");
-    expect(await secao("E-mail").findByText("joana.nova@exemplo.com")).toBeInTheDocument();
+    expect(screen.getByText("joana.nova@exemplo.com")).toBeInTheDocument();
   });
 
   it("avisa quando o link de confirmação expirou", async () => {
     simularApi({
-      "POST /perfil/email/confirmar": () => ({ status: 400, corpo: ["O link de confirmação é inválido ou expirou."] }),
+      "POST /perfil/email/confirmar": () => ({
+        status: 400,
+        corpo: ["O link de confirmação é inválido ou expirou."],
+      }),
     });
     renderizarAplicacao({ rota: "/confirmar-email?token=velho" });
 

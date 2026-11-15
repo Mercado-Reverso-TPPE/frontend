@@ -19,7 +19,7 @@ type NovoStatus = "ativo" | "pausado" | "encerrado";
 
 function faixaDePreco(anuncio: MeuAnuncio) {
   const { precoMin, precoMax } = anuncio;
-  if (precoMin !== null && precoMax !== null) return `${fmtPrice(precoMin)} a ${fmtPrice(precoMax)}`;
+  if (precoMin !== null && precoMax !== null) return `${fmtPrice(precoMin)} — ${fmtPrice(precoMax)}`;
   if (precoMax !== null) return `Até ${fmtPrice(precoMax)}`;
   if (precoMin !== null) return `A partir de ${fmtPrice(precoMin)}`;
   return "Sem faixa de preço";
@@ -145,9 +145,13 @@ function ItemDoAnuncio({
   aoMudarStatus: (status: NovoStatus) => void;
 }) {
   const acoes = acoesPermitidas(anuncio.status);
+  const encerrado = anuncio.status === "encerrado";
+  const { ofertasRecebidas: ofertas } = anuncio;
 
   return (
-    <li className={`${estilos.item} ${anuncio.status === "encerrado" ? estilos.encerrado : ""}`}>
+    <li className={`${estilos.item} ${encerrado ? estilos.encerrado : ""}`}>
+      <span className={`${estilos.ponto} ${estilos[`ponto_${anuncio.status}`] ?? ""}`} aria-hidden="true" />
+
       <div className={estilos.info}>
         <div className={estilos.linhaTitulo}>
           <h2>{anuncio.titulo}</h2>
@@ -156,41 +160,59 @@ function ItemDoAnuncio({
         <p className={estilos.detalhes}>
           <span className={estilos.preco}>{faixaDePreco(anuncio)}</span>
           <span className={estilos.ofertas}>
-            <strong>{anuncio.ofertasRecebidas}</strong>{" "}
-            {anuncio.ofertasRecebidas === 1 ? "oferta recebida" : "ofertas recebidas"}
+            <strong>{ofertas}</strong> {ofertas === 1 ? "oferta" : "ofertas"}
           </span>
-          <span>Raio de {anuncio.raioKm} km</span>
           <span>Publicado em {fmtData(anuncio.criadoEm)}</span>
         </p>
       </div>
 
-      <div className={estilos.acoes} aria-label={`Ações de ${anuncio.titulo}`} role="group">
-        {anuncio.ofertasRecebidas > 0 && (
-          <Botao para={`/anuncios/${anuncio.id}/ofertas`} variante="secundario" tamanho="pequeno">
-            Ver ofertas
+      {encerrado ? (
+        <p className={estilos.encerradoEm}>
+          Encerrado em {fmtData(anuncio.atualizadoEm ?? anuncio.criadoEm)}
+        </p>
+      ) : (
+        <div className={estilos.acoes} aria-label={`Ações de ${anuncio.titulo}`} role="group">
+          <Botao
+            para={acoes.includes("editar") ? `/meus-anuncios/${anuncio.id}/editar` : `/anuncios/${anuncio.id}`}
+            variante="suave"
+            tamanho="pequeno"
+            title={acoes.includes("editar") ? "Ver e editar o anúncio" : "Ver o anúncio"}
+          >
+            <span aria-hidden="true">✏️ </span>Ver
           </Botao>
-        )}
-        {acoes.includes("editar") && (
-          <Botao para={`/meus-anuncios/${anuncio.id}/editar`} variante="suave" tamanho="pequeno">
-            Editar
-          </Botao>
-        )}
-        {acoes.includes("pausar") && (
-          <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("pausado")}>
-            Pausar
-          </Botao>
-        )}
-        {acoes.includes("reativar") && (
-          <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("ativo")}>
-            Reativar
-          </Botao>
-        )}
-        {acoes.includes("encerrar") && (
-          <Botao variante="perigo" tamanho="pequeno" disabled={ocupado} onClick={() => aoMudarStatus("encerrado")}>
-            Encerrar
-          </Botao>
-        )}
-      </div>
+          {ofertas > 0 && (
+            <Botao
+              para={`/anuncios/${anuncio.id}/ofertas`}
+              variante="secundario"
+              tamanho="pequeno"
+              className={estilos.botaoOfertas}
+            >
+              {fmtPlural(ofertas, "oferta")}
+            </Botao>
+          )}
+          {acoes.includes("pausar") && (
+            <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("pausado")}>
+              Pausar
+            </Botao>
+          )}
+          {acoes.includes("reativar") && (
+            <Botao variante="suave" tamanho="pequeno" carregando={ocupado} onClick={() => aoMudarStatus("ativo")}>
+              Reativar
+            </Botao>
+          )}
+          {acoes.includes("encerrar") && (
+            <Botao
+              variante="perigo"
+              tamanho="pequeno"
+              className={estilos.botaoEncerrar}
+              disabled={ocupado}
+              onClick={() => aoMudarStatus("encerrado")}
+            >
+              Encerrar
+            </Botao>
+          )}
+        </div>
+      )}
     </li>
   );
 }

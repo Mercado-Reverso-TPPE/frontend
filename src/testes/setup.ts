@@ -4,6 +4,7 @@ import { definirTokenDeAcesso } from "@/api/cliente";
 import { reiniciarDemoDoCatalogo } from "@/api/catalogo";
 import { reiniciarDemoDeMeusAnuncios } from "@/api/meusAnuncios";
 import { reiniciarDemoDeOfertas } from "@/api/ofertas";
+import { definirAvaliacoesDemo } from "@/api/perfil";
 
 // A sessão guarda o token de renovação no sessionStorage e o de acesso no
 // módulo do cliente; nenhum teste pode herdar a sessão nem a API falsa do anterior.
@@ -16,4 +17,5 @@ afterEach(() => {
   reiniciarDemoDeMeusAnuncios();
   reiniciarDemoDeOfertas();
   reiniciarDemoDoCatalogo();
+  definirAvaliacoesDemo(null);
 });

@@ -29,6 +29,13 @@
   color: var(--texto-primario);
 }
 
+.cartaoCabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--espaco-2);
+}
+
 .explicacao {
   margin: 0 0 var(--espaco-2);
   font-size: 13px;
@@ -51,9 +58,53 @@
 }
 
 .meta {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 13px;
   color: var(--texto-secundario);
+}
+
+.selos {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-1);
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.estrelasTexto {
+  color: var(--estrela);
+  font-weight: var(--peso-semibold);
+}
+
+.gradeInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-2);
+  margin-top: var(--espaco-2);
+}
+
+.campoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--espaco-1-5) var(--espaco-2);
+  background-color: var(--superficie);
+  border-radius: var(--raio-card);
+}
+
+.rotuloCaixaAlta {
+  font-family: var(--fonte-titulo);
+  font-size: 11px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-terciario);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.valorInfo {
+  font-size: 15px;
+  font-weight: var(--peso-medium);
+  color: var(--texto-primario);
 }
 
 .formulario {
@@ -100,6 +151,61 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--espaco-1-5);
+  margin-top: var(--espaco-2);
+}
+
+.listaAvaliacoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+  list-style: none;
+  padding: 0;
+  margin: var(--espaco-2) 0 0;
+}
+
+.itemAvaliacao {
+  padding: var(--espaco-2);
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+  border: 1px solid var(--borda);
+}
+
+.topoAvaliacao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.autorAvaliacao {
+  font-family: var(--fonte-titulo);
+  font-size: 14px;
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+.dataAvaliacao {
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.notaEstrelas {
+  color: var(--estrela);
+  font-size: 14px;
+}
+
+.comentarioAvaliacao {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--texto-secundario);
+  line-height: 1.5;
+}
+
+.barraEdicao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--espaco-2);
 }
 
 @media (max-width: 640px) {
@@ -113,6 +219,7 @@
 
   .grade,
   .gradeLocalizacao,
+  .gradeInfo,
   .atalhos {
     grid-template-columns: 1fr;
   }

@@ -166,6 +166,11 @@
   cursor: pointer;
 }
 
+.opcaoIcone {
+  display: flex;
+  color: var(--texto-secundario);
+}
+
 .opcao:hover {
   background-color: var(--superficie);
 }

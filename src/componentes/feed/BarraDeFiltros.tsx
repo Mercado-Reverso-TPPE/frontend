@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { FiltrosDoFeed } from "@/api/anuncios";
+import type { FiltrosDoFeed, TipoDoFeed } from "@/api/anuncios";
 import { listarCategorias, RAIO_MAXIMO_KM } from "@/api/meusAnuncios";
 import { Botao, Campo } from "@/componentes/base";
 import { fmtPlural } from "@/utils/formato";
@@ -9,6 +9,12 @@ import { ChipsCategoria } from "./ChipsCategoria";
 import estilos from "./Feed.module.css";
 
 const DISTANCIAS = [5, 10, 25, 50, 100, RAIO_MAXIMO_KM];
+
+const TIPOS: { valor: TipoDoFeed; rotulo: string; icone: string }[] = [
+  { valor: "todos", rotulo: "Todos", icone: "🌐" },
+  { valor: "procurando", rotulo: "Procurando", icone: "🛒" },
+  { valor: "vendendo", rotulo: "Vendendo", icone: "🏷️" },
+];
 
 interface BarraDeFiltrosProps {
   filtros: FiltrosDoFeed;
@@ -20,8 +26,9 @@ interface BarraDeFiltrosProps {
 }
 
 /**
- * Barra fixa de filtros do feed (QRO-07): categoria, faixa de preço e
- * distância máxima. Todos combinam entre si e com a ordenação.
+ * Barra fixa de filtros do feed (QRO-07): aba (Todos / Procurando /
+ * Vendendo), categoria, faixa de preço e distância máxima. Todos combinam
+ * entre si e com a ordenação.
  */
 export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo, aoLimpar }: BarraDeFiltrosProps) {
   const categorias = useQuery({ queryKey: ["categorias"], queryFn: listarCategorias, staleTime: Infinity });
@@ -52,6 +59,38 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo,
   return (
     <div className={estilos.barra}>
       <div className={estilos.barraFaixa}>
+        <div className={estilos.linhaDeTipos}>
+          <div className={estilos.tipos} role="group" aria-label="Tipo de anúncio">
+            {TIPOS.map((tipo) => (
+              <button
+                key={tipo.valor}
+                type="button"
+                className={`${estilos.tipo} ${filtros.tipo === tipo.valor ? estilos.tipoAtivo : ""}`}
+                aria-pressed={filtros.tipo === tipo.valor}
+                onClick={() => aoAlterar({ tipo: tipo.valor })}
+              >
+                <span aria-hidden="true">{tipo.icone} </span>
+                {tipo.rotulo}
+              </button>
+            ))}
+          </div>
+          <span className={estilos.separador} aria-hidden="true" />
+          <span className={estilos.resultados} aria-live="polite">
+            {resultados === undefined ? "Buscando anúncios…" : fmtPlural(resultados, "resultado")}
+          </span>
+          {temFiltroAtivo && (
+            <Botao variante="texto" tamanho="pequeno" onClick={aoLimpar}>
+              Limpar filtros
+            </Botao>
+          )}
+        </div>
+
+        <ChipsCategoria
+          categorias={categorias.data ?? []}
+          ativa={filtros.categoria}
+          aoSelecionar={(categoria) => aoAlterar({ categoria })}
+        />
+
         <form className={estilos.filtrosExtras} onSubmit={aplicarPreco} noValidate aria-label="Filtros de preço e distância">
           <Campo
             rotulo="Orçamento a partir de (R$)"
@@ -85,23 +124,6 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo,
             ))}
           </Campo>
         </form>
-
-        <div className={estilos.linhaDeTipos}>
-          <span className={estilos.resultados} aria-live="polite">
-            {resultados === undefined ? "Buscando anúncios…" : fmtPlural(resultados, "resultado")}
-          </span>
-          {temFiltroAtivo && (
-            <Botao variante="texto" tamanho="pequeno" onClick={aoLimpar}>
-              Limpar filtros
-            </Botao>
-          )}
-        </div>
-
-        <ChipsCategoria
-          categorias={categorias.data ?? []}
-          ativa={filtros.categoria}
-          aoSelecionar={(categoria) => aoAlterar({ categoria })}
-        />
       </div>
     </div>
   );
