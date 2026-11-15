@@ -9,14 +9,6 @@ from paginas import Cabecalho, CriarAnuncio, Feed, MeusAnuncios, Notificacoes, P
 pytestmark = pytest.mark.sessao
 
 
-def test_entrar_mostra_o_avatar_e_sair_encerra(logado, base_url):
-    cabecalho = Cabecalho(logado, base_url)
-
-    assert cabecalho.avatar().is_displayed()
-    cabecalho.sair()
-    assert not cabecalho.esta_logado()
-
-
 def test_busca_e_categoria_ficam_na_url_e_mudam_a_lista(logado, base_url):
     feed = Feed(logado, base_url).abrir()
     antes = feed.esperar_lista()
@@ -77,10 +69,18 @@ def test_editar_telefone_no_perfil(logado, base_url):
         perfil.salvar_telefone(novo)
         logado.refresh()
         perfil.esperar_aplicacao()
-        perfil.abrir_edicao()
-        perfil.espera.until(lambda _: perfil.telefone() == novo)
+        perfil.espera.until(lambda _: perfil.telefone_exibido() == novo)
     finally:
         # Devolve o telefone original para a conta de teste ficar como estava.
         perfil.abrir_edicao()
         if perfil.telefone() != original:
             perfil.salvar_telefone(original)
+
+
+# Por último: sair encerra a sessão compartilhada pelos cenários acima.
+def test_entrar_mostra_o_avatar_e_sair_encerra(logado, base_url):
+    cabecalho = Cabecalho(logado, base_url)
+
+    assert cabecalho.avatar().is_displayed()
+    cabecalho.sair()
+    assert not cabecalho.esta_logado()

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import time
+
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from .base import Pagina
 from .cabecalho import Cabecalho
+
+# O backend aceita 5 `POST /sessoes` por minuto; passado o limite, espera a janela virar.
+ESPERA_DO_LIMITE_DE_LOGIN = 61
 
 
 class Entrar(Pagina):
@@ -18,8 +24,17 @@ class Entrar(Pagina):
         return self
 
     def entrar_e_esperar(self, email: str, senha: str):
+        """Entra e espera o menu da conta. Se o login não passar (o limite de 5 por
+        minuto do backend estourou), espera a janela virar e envia o formulário de novo,
+        na mesma tela, para não perder o `?retorno=`."""
+        cabecalho = Cabecalho(self.driver, self.base_url)
         self.entrar(email, senha)
-        Cabecalho(self.driver, self.base_url).esperar_logado()
+        try:
+            cabecalho.esperar_logado()
+        except TimeoutException:
+            time.sleep(ESPERA_DO_LIMITE_DE_LOGIN)
+            self.entrar(email, senha)
+            cabecalho.esperar_logado()
         return self
 
     def mensagem_de_erro(self) -> str:

@@ -209,7 +209,7 @@ Os testes vivem em `src/testes/`: `componentes/` cobre os componentes-base e os 
 
 `e2e/` tem os testes de navegador com **Python + pytest + Selenium WebDriver** (Chrome headless), escritos com Page Objects (`e2e/paginas/`: cabeçalho, entrar, feed, criar anúncio, meus anúncios, perfil, notificações e histórico). Python foi escolhido porque o Selenium Manager já baixa o driver certo e o pytest dá fixtures simples para sessão e limpeza.
 
-Cenários (`e2e/testes/`): home deslogado (hero, abas e categorias), entrar e sair, senha errada, busca e categoria na URL, detalhe e volta com os filtros, criar → pausar → reativar → encerrar um anúncio, rota privada com retorno ao destino, recarga de rota profunda sem 404, marcar todas as notificações como lidas e editar o telefone do perfil.
+Cenários (`e2e/testes/`): home deslogado (hero, métricas e convite para entrar), home logado (abas e chips de categoria), entrar e sair, senha errada, busca e categoria na URL, detalhe e volta com os filtros, criar → pausar → reativar → encerrar um anúncio, rota privada com retorno ao destino, recarga de rota profunda sem 404, marcar todas as notificações como lidas e editar o telefone do perfil.
 
 | Variável | Efeito |
 | :--- | :--- |
@@ -228,7 +228,9 @@ E2E_BASE_URL=http://localhost:5173 pytest        # só os cenários públicos
 E2E_BASE_URL=http://localhost:5173 E2E_EMAIL=... E2E_SENHA=... pytest
 ```
 
-Contra os dados de demonstração (sem `VITE_API_URL`) o login aceita qualquer senha e o perfil não persiste, então "senha errada" e "editar telefone" só fazem sentido com a API ligada.
+O frontend local precisa de `VITE_API_URL` apontando para um backend. Com o backend do grupo em Docker, `python manage.py popular_banco` cria a conta de homologação `voce@example.com` / `quero-homologacao-2026`; o backend precisa ter `http://localhost:5173` em `CORS_ALLOWED_ORIGINS`.
+
+O backend aceita 5 logins por minuto e 30 requisições anônimas por hora por IP (entre elas, `POST /sessoes/renovar`, chamado a cada recarga de página). Por isso os cenários com sessão dividem um único navegador logado, as páginas navegam pelo roteador da SPA em vez de recarregar, e o login espera a janela de um minuto e tenta de novo quando o limite estoura. Rodar a suíte muitas vezes seguidas contra o mesmo backend ainda pode esbarrar no limite por hora.
 
 Os testes não deixam dados ativos: anúncios criados levam o prefixo `[E2E]` e uma fixture encerra, ao final, qualquer um que tenha ficado ativo ou pausado; o telefone volta ao valor original. Em falha, capturas de tela, HTML, console e URL vão para `e2e/artefatos/`.
 

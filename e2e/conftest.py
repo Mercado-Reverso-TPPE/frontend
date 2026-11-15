@@ -38,8 +38,7 @@ def credenciais() -> tuple[str, str]:
     return email, senha
 
 
-@pytest.fixture
-def driver():
+def _novo_navegador():
     opcoes = webdriver.ChromeOptions()
     if os.environ.get("E2E_HEADLESS", "1") != "0":
         opcoes.add_argument("--headless=new")
@@ -48,17 +47,36 @@ def driver():
     opcoes.add_argument("--disable-dev-shm-usage")
     opcoes.add_argument("--lang=pt-BR")
     opcoes.set_capability("goog:loggingPrefs", {"browser": "ALL"})
-    navegador = webdriver.Chrome(options=opcoes)
+    return webdriver.Chrome(options=opcoes)
+
+
+@pytest.fixture
+def driver():
+    navegador = _novo_navegador()
+    yield navegador
+    navegador.quit()
+
+
+def _entrar(navegador, base_url: str, email: str, senha: str):
+    Entrar(navegador, base_url).abrir().entrar_e_esperar(email, senha)
+
+
+@pytest.fixture(scope="session")
+def navegador_logado(base_url, credenciais):
+    """Um navegador só para todos os cenários com sessão: um login por execução."""
+    navegador = _novo_navegador()
+    _entrar(navegador, base_url, *credenciais)
     yield navegador
     navegador.quit()
 
 
 @pytest.fixture
-def logado(driver, base_url, credenciais):
-    """Driver com a sessão da conta de teste aberta."""
-    email, senha = credenciais
-    Entrar(driver, base_url).abrir().entrar_e_esperar(email, senha)
-    return driver
+def logado(navegador_logado, base_url, credenciais):
+    """Navegador com a sessão da conta de teste aberta (entra de novo se um teste saiu)."""
+    cabecalho = Cabecalho(navegador_logado, base_url).abrir("/")
+    if not cabecalho.esta_logado():
+        _entrar(navegador_logado, base_url, *credenciais)
+    return navegador_logado
 
 
 @pytest.fixture
@@ -89,7 +107,7 @@ def pytest_runtest_makereport(item, call):
     relatorio = resultado.get_result()
     if relatorio.when != "call" or not relatorio.failed:
         return
-    navegador = item.funcargs.get("driver")
+    navegador = item.funcargs.get("driver") or item.funcargs.get("logado")
     if navegador is None:
         return
     ARTEFATOS.mkdir(parents=True, exist_ok=True)

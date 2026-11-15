@@ -17,6 +17,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 ESPERA_PADRAO = 20
 
+# Navegação do lado do cliente: empilha a entrada no histórico no formato do
+# React Router (`usr`, `key`, `idx`) e avisa o roteador com um `popstate`.
+NAVEGAR_NA_SPA = """
+const atual = window.history.state || {};
+const idx = (typeof atual.idx === 'number' ? atual.idx : 0) + 1;
+window.history.pushState({ usr: null, key: Math.random().toString(36).slice(2, 10), idx }, '', arguments[0]);
+window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+"""
+
 
 def literal_xpath(texto: str) -> str:
     """Texto como literal XPath, mesmo com aspas simples e duplas."""
@@ -38,9 +47,21 @@ class Pagina:
 
     # ── Navegação ────────────────────────────────────────────────────────
     def abrir(self, caminho: str | None = None):
-        self.driver.get(f"{self.base_url}{caminho or self.caminho}")
+        """Vai para `caminho`. Com a SPA já aberta, navega pelo histórico do roteador
+        em vez de recarregar: recarregar descarta o token de acesso (fica só em memória)
+        e força um `POST /sessoes/renovar`, que o backend limita por hora."""
+        destino = caminho or self.caminho
+        if self._aplicacao_aberta():
+            self.driver.execute_script(NAVEGAR_NA_SPA, destino)
+        else:
+            self.driver.get(f"{self.base_url}{destino}")
         self.esperar_aplicacao()
         return self
+
+    def _aplicacao_aberta(self) -> bool:
+        return self.driver.current_url.startswith(self.base_url) and bool(
+            self.driver.execute_script("return document.querySelector('#root > *') !== null")
+        )
 
     def esperar_aplicacao(self):
         """A SPA montou: o cabeçalho ou o layout de autenticação apareceu."""
@@ -72,7 +93,8 @@ class Pagina:
         elemento = self.campo(rotulo)
         elemento.clear()
         # `clear()` não dispara o onChange do React em todo navegador.
-        elemento.send_keys("a")  # Ctrl+A, Backspace
+        elemento.send_keys(Keys.CONTROL, "a")
+        elemento.send_keys(Keys.BACKSPACE)
         elemento.send_keys(valor)
         return elemento
 

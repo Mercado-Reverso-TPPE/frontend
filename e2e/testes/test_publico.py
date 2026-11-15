@@ -6,12 +6,22 @@ from selenium.webdriver.common.by import By
 from paginas import Cabecalho, Entrar, Feed
 
 
-def test_home_deslogado_mostra_hero_abas_e_categorias(driver, base_url):
+def test_home_deslogado_mostra_hero_e_convida_a_entrar(driver, base_url):
+    """Com a API, o feed depende da localização da conta: deslogado, só o hero e o convite."""
     feed = Feed(driver, base_url).abrir()
 
     hero = feed.hero()
     assert "Você anuncia o que quer." in hero.text
     assert hero.find_elements(By.TAG_NAME, "dd"), "o hero deveria mostrar as métricas"
+    feed.titulo("Entre para ver anúncios perto de você")
+    assert feed.botao("Entrar").is_displayed()
+
+
+@pytest.mark.sessao
+def test_home_logado_mostra_abas_e_categorias(logado, base_url):
+    feed = Feed(logado, base_url).abrir()
+
+    feed.hero()
     assert feed.abas().find_elements(By.TAG_NAME, "button")
     chips = feed.chips_de_categoria()
     assert chips[0].text.startswith("Todos")
