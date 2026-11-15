@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router";
-import { apiConfigurada } from "@/api/cliente";
 import { contarNaoLidas } from "@/api/notificacoes";
 import { Avatar, Botao } from "@/componentes/base";
 import { IBell, IChevronDown, IHistory, IPackage, IPlus, ISearch, IUser } from "@/componentes/icones";
@@ -32,7 +31,7 @@ export function Cabecalho() {
   const contagem = useQuery({
     queryKey: ["notificacoes", "nao-lidas"],
     queryFn: contarNaoLidas,
-    enabled: autenticado && apiConfigurada(),
+    enabled: autenticado,
     refetchInterval: 60_000,
   });
   const naoLidas = autenticado ? (contagem.data ?? 0) : 0;

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { obterAnuncio } from "@/api/anuncios";
-import { apiConfigurada, ErroDeApi } from "@/api/cliente";
+import { ErroDeApi } from "@/api/cliente";
 import { acoesPermitidas } from "@/api/meusAnuncios";
 import { faixaDoAnuncio, localDoAnuncio } from "@/componentes/anuncio";
 import { Badge, Botao } from "@/componentes/base";
@@ -18,7 +18,7 @@ export default function AnuncioDetalhe() {
   const navegar = useNavigate();
   const localizacao = useLocation();
   const { autenticado, verificando, usuario } = useSessao();
-  const exigeEntrar = apiConfigurada() && !autenticado;
+  const exigeEntrar = !autenticado;
 
   const anuncio = useQuery({
     queryKey: ["anuncio", id],

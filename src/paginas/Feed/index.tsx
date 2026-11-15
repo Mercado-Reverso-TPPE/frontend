@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "react-router";
-import { apiConfigurada } from "@/api/cliente";
 import type { Anuncio } from "@/api/meusAnuncios";
 import { Botao } from "@/componentes/base";
 import {
@@ -67,9 +66,9 @@ export default function Feed() {
   const localizacao = useLocation();
   const { filtros, alterar, limpar, temFiltroAtivo } = useFiltros();
 
-  const comApi = apiConfigurada();
-  const semLocalizacao = comApi && autenticado && !usuario?.city && !usuario?.cep;
-  const podeBuscar = !comApi || (autenticado && !semLocalizacao);
+  // O backend só devolve o que alcança quem busca: exige sessão e localização.
+  const semLocalizacao = autenticado && !usuario?.city && !usuario?.cep;
+  const podeBuscar = autenticado && !semLocalizacao;
 
   const feed = useFeed(filtros, podeBuscar);
   const perto = usePertoDeVoce(podeBuscar);
@@ -86,7 +85,7 @@ export default function Feed() {
 
   const metricas = metricasDoHero(useEstatisticas());
 
-  if (comApi && !podeBuscar && !verificando) {
+  if (!podeBuscar && !verificando) {
     const retorno = encodeURIComponent(`${localizacao.pathname}${localizacao.search}`);
     return (
       <>

@@ -90,16 +90,18 @@ const aba = (nome: string) =>
 const chamadasDoFeed = (chamadas: ReturnType<typeof simularApi>) =>
   chamadas.filter((chamada) => chamada.caminho === "/anuncios" && chamada.parametros.tamanho === "12");
 
-describe("feed de anúncios (demonstração)", () => {
+describe("feed de anúncios", () => {
   it("mostra o esqueleto de carregamento antes dos anúncios", async () => {
-    renderizarAplicacao();
+    apiComFeed(2);
+    renderizarAplicacao({ usuario });
 
-    expect(screen.getByText("Carregando anúncios…")).toBeInTheDocument();
-    expect((await screen.findAllByText("iPhone 15 Pro Max 256GB")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Carregando anúncios…")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
   });
 
   it("explica o próximo passo quando a busca não encontra nada", async () => {
-    renderizarAplicacao({ rota: "/?q=zepelim%20de%20borracha" });
+    apiComFeed(0);
+    renderizarAplicacao({ rota: "/?q=zepelim%20de%20borracha", usuario });
 
     expect(await screen.findByRole("heading", { name: "Nenhum anúncio encontrado" })).toBeInTheDocument();
     expect(screen.getByText(/Tente outra categoria, aumente a distância/)).toBeInTheDocument();
@@ -108,8 +110,9 @@ describe("feed de anúncios (demonstração)", () => {
   });
 
   it("intercala pedidos e produtos na aba Todos", async () => {
-    renderizarAplicacao();
-    await screen.findByRole("heading", { name: "9 anúncios" });
+    apiComFeed(2, [produto("p1", "PlayStation 5"), produto("p2", "Xbox Series X")]);
+    renderizarAplicacao({ usuario });
+    await screen.findByRole("heading", { name: "4 anúncios" });
 
     expect(aba("Todos")).toHaveAttribute("aria-pressed", "true");
     const [primeiro, segundo] = screen.getAllByRole("article");
@@ -239,19 +242,12 @@ describe("feed de anúncios (API)", () => {
 });
 
 describe("recomendações", () => {
-  it("convidam a ofertar ou podem ser descartadas, sem criar oferta", async () => {
+  it("não mostram nada inventado enquanto o backend não recomenda para quem vende", async () => {
+    apiComFeed(2);
     renderizarAplicacao({ usuario });
-    const carrossel = within(await screen.findByRole("region", { name: "Recomendados para você" }));
 
-    const [primeiroConvite] = carrossel.getAllByRole("link", { name: /Fazer oferta em/ });
-    expect(primeiroConvite).toHaveAttribute("href", expect.stringMatching(/^\/anuncios\/.+\/ofertar$/));
-
-    const descartes = carrossel.getAllByRole("button", { name: /Descartar recomendação/ });
-    const nome = descartes[0]!.getAttribute("aria-label")!.replace("Descartar recomendação ", "");
-    await userEvent.click(descartes[0]!);
-
-    expect(carrossel.queryByRole("button", { name: `Descartar recomendação ${nome}` })).not.toBeInTheDocument();
-    expect(localStorage.getItem("quero.recomendacoes.descartadas")).toContain('"');
+    await screen.findByRole("heading", { name: "2 anúncios" });
+    expect(screen.queryByRole("region", { name: "Recomendados para você" })).not.toBeInTheDocument();
   });
 });
 
@@ -333,18 +329,7 @@ describe("trilha de categorias e métricas do hero", () => {
   const categorias = () => within(screen.getByRole("group", { name: "Categorias" }));
   const metricas = () => within(screen.getByRole("region", { name: /Você anuncia o que quer/ }));
 
-  it("na demonstração, soma tudo em Todos e mostra as métricas do protótipo", async () => {
-    renderizarAplicacao();
-    await screen.findByRole("heading", { name: "9 anúncios" });
-
-    expect(await categorias().findByRole("button", { name: "Todos (9 anúncios)" })).toHaveAttribute("aria-pressed", "true");
-    expect(metricas().getByText("2.847")).toBeInTheDocument();
-    expect(metricas().getByText("314")).toBeInTheDocument();
-    expect(metricas().getByText("18,4k")).toBeInTheDocument();
-    expect(metricas().getByText("cidades cobertas")).toBeInTheDocument();
-  });
-
-  it("com a API, conta por categoria respeitando a aba e a busca", async () => {
+  it("conta por categoria respeitando a aba e a busca", async () => {
     const chamadas = apiComFeed(3, vitrine, {
       "GET /estatisticas": () => ({ corpo: { anuncios_ativos: 1520, cidades: 42, vendedores: 12345 } }),
       "GET /anuncios/categorias": () => ({ corpo: [{ slug: "esportes", total: 3 }] }),
@@ -370,12 +355,14 @@ describe("trilha de categorias e métricas do hero", () => {
     expect(categorias().getByRole("button", { name: "Games (0 anúncios)" })).toBeInTheDocument();
   });
 
-  it("sem as rotas no backend, os chips ficam sem número e o hero usa a demonstração", async () => {
-    apiComFeed(2);
+  it("se as métricas ou a contagem falham, não inventa números", async () => {
+    apiComFeed(2, null, {
+      "GET /estatisticas": () => ({ status: 503, corpo: { detail: "Indisponível." } }),
+    });
     renderizarAplicacao({ usuario });
 
     expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
-    expect(await metricas().findByText("2.847")).toBeInTheDocument();
+    expect(metricas().queryByText("anúncios ativos")).not.toBeInTheDocument();
     expect(categorias().getByRole("button", { name: "Todos" })).toBeInTheDocument();
     expect(await categorias().findByRole("button", { name: "Esportes" })).toBeInTheDocument();
   });

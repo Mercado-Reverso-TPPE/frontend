@@ -6,7 +6,7 @@ import {
   type FiltrosDoFeed,
 } from "@/api/anuncios";
 import { listarItensDoFeed, type CursorDoFeed } from "@/api/feed";
-import { ESTATISTICAS_DE_DEMONSTRACAO, obterEstatisticas } from "@/api/estatisticas";
+import { obterEstatisticas } from "@/api/estatisticas";
 
 /**
  * Feed paginado da aba escolhida: cada "carregar mais" busca a página
@@ -37,8 +37,8 @@ export function useRecomendacoes(habilitado = true) {
 }
 
 /**
- * Métricas públicas do hero. Qualquer falha cai para os números de
- * demonstração para não deixar o hero vazio.
+ * Métricas públicas do hero, direto do backend. Enquanto carregam, ou se a
+ * chamada falhar, o hero aparece sem as métricas: nunca com números inventados.
  */
 export function useEstatisticas() {
   const consulta = useQuery({
@@ -47,5 +47,5 @@ export function useEstatisticas() {
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  return consulta.isError ? ESTATISTICAS_DE_DEMONSTRACAO : consulta.data;
+  return consulta.data;
 }

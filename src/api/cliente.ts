@@ -5,9 +5,9 @@
  * um tempo limite. Nenhum componente deve chamar `fetch` direto — assim o
  * tratamento de carregamento e erro fica uniforme em todas as telas.
  *
- * O contrato oficial da API ainda não foi publicado. Enquanto `VITE_API_URL`
- * estiver vazia, os recursos em `api/` respondem com os dados de
- * demonstração e `apiConfigurada()` devolve `false`.
+ * Não há modo de demonstração: todos os dados vêm do backend apontado por
+ * `VITE_API_URL`. Sem ela, toda chamada falha com `codigo: "sem-api"` e as
+ * telas mostram o estado de erro.
  */
 
 /** Base da API. Lida a cada chamada para que os testes possam trocá-la. */

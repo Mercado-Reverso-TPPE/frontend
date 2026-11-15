@@ -4,11 +4,10 @@
  * Endpoints: `GET/POST /produtos`, `GET/PATCH/DELETE /produtos/:id`,
  * `PATCH /produtos/:id/status`, `POST /produtos/:id/fotos` (multipart, campo
  * `fotos`) e `DELETE /produtos/:id/fotos/:fotoId`. O backend só devolve os
- * produtos da própria pessoa. Sem `VITE_API_URL`, um armazenamento em memória
- * faz o papel do backend.
+ * produtos da própria pessoa.
  */
 
-import { api, apiConfigurada, ErroDeApi } from "./cliente";
+import { api } from "./cliente";
 import { paginaDe, type Pagina, type RespostaPaginada } from "./paginacao";
 import type { EstadoDeConservacao } from "./ofertas";
 
@@ -120,38 +119,11 @@ const corpoDoProduto = (dados: DadosDoProduto) => ({
   preco: dados.preco.toFixed(2),
 });
 
-// ── Demonstração ────────────────────────────────────────────────────────────
-
-let produtosDemo: Produto[] = [];
-let proximaFotoDemo = 1;
-
-export function reiniciarDemoDoCatalogo() {
-  produtosDemo = [];
-  proximaFotoDemo = 1;
-}
-
-const esperar = () => new Promise((resolve) => setTimeout(resolve, 200));
-
-function recusarDemo(mensagem: string): never {
-  throw new ErroDeApi(mensagem, { status: 400, detalhes: [mensagem] });
-}
-
-function encontrarDemo(id: string) {
-  const produto = produtosDemo.find((item) => item.id === id);
-  if (!produto) throw new ErroDeApi("Não encontramos este produto.", { status: 404 });
-  return produto;
-}
-
 // ── Recursos ────────────────────────────────────────────────────────────────
 
 export async function listarProdutos(
   { status, cursor }: { status?: StatusDoProduto; cursor?: string | null } = {},
 ): Promise<Pagina<Produto>> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const itens = produtosDemo.filter((produto) => !status || produto.status === status);
-    return { itens: itens.map((produto) => ({ ...produto, fotos: [...produto.fotos] })), proximo: null };
-  }
   const resposta = await api.get<RespostaPaginada<ProdutoDaApi>>("/produtos", {
     parametros: { status, cursor: cursor ?? undefined },
   });
@@ -159,84 +131,27 @@ export async function listarProdutos(
 }
 
 export async function criarProduto(dados: DadosDoProduto, categoriaNome = ""): Promise<Produto> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const novo: Produto = {
-      ...dados,
-      nome: dados.nome.trim(),
-      descricao: dados.descricao.trim(),
-      categoriaNome: categoriaNome || dados.categoria,
-      id: `produto-${Date.now()}-${produtosDemo.length}`,
-      status: "disponivel",
-      fotos: [],
-      criadoEm: new Date().toISOString(),
-    };
-    produtosDemo.unshift(novo);
-    return { ...novo };
-  }
   return produtoDaApi(await api.post<ProdutoDaApi>("/produtos", corpoDoProduto(dados)));
 }
 
 export async function editarProduto(id: string, dados: DadosDoProduto, categoriaNome = ""): Promise<Produto> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const produto = encontrarDemo(id);
-    if (!podeEditarProduto(produto)) recusarDemo("Produtos vendidos não podem ser alterados.");
-    Object.assign(produto, dados, { categoriaNome: categoriaNome || dados.categoria });
-    return { ...produto };
-  }
   return produtoDaApi(await api.patch<ProdutoDaApi>(`/produtos/${id}`, corpoDoProduto(dados)));
 }
 
 export async function excluirProduto(id: string): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const produto = encontrarDemo(id);
-    if (!podeExcluirProduto(produto)) recusarDemo("Produtos reservados em uma negociação não podem ser excluídos.");
-    produtosDemo = produtosDemo.filter((item) => item.id !== id);
-    return;
-  }
   await api.remove<void>(`/produtos/${id}`);
 }
 
 export async function alterarStatusDoProduto(id: string, status: StatusDoProduto): Promise<Produto> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const produto = encontrarDemo(id);
-    if (!transicoesDoProduto(produto.status).includes(status)) recusarDemo("Transição de status do produto inválida.");
-    produto.status = status;
-    return { ...produto };
-  }
   return produtoDaApi(await api.patch<ProdutoDaApi>(`/produtos/${id}/status`, { status }));
 }
 
 export async function enviarFotos(id: string, arquivos: File[]): Promise<FotoDoProduto[]> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const produto = encontrarDemo(id);
-    if (!podeEditarProduto(produto)) recusarDemo("Produtos vendidos não podem ser alterados.");
-    const erros = validarFotos(arquivos, produto.fotos.length);
-    if (erros.length) throw new ErroDeApi(erros[0], { status: 400, detalhes: { fotos: erros } });
-    const criarUrl = typeof URL.createObjectURL === "function" ? URL.createObjectURL : () => "";
-    const novas = arquivos.map((arquivo, indice) => ({
-      id: proximaFotoDemo++,
-      url: criarUrl(arquivo),
-      ordem: produto.fotos.length + indice + 1,
-    }));
-    produto.fotos.push(...novas);
-    return novas;
-  }
   const formulario = new FormData();
   for (const arquivo of arquivos) formulario.append("fotos", arquivo);
   return api.post<FotoDoProduto[]>(`/produtos/${id}/fotos`, formulario);
 }
 
 export async function removerFoto(id: string, fotoId: number): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const produto = encontrarDemo(id);
-    produto.fotos = produto.fotos.filter((foto) => foto.id !== fotoId);
-    return;
-  }
   await api.remove<void>(`/produtos/${id}/fotos/${fotoId}`);
 }
