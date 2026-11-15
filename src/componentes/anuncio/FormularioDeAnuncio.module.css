@@ -137,6 +137,91 @@
   color: var(--sucesso-texto);
 }
 
+.grupoChips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+}
+
+.rotuloChips {
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-semibold);
+  color: var(--texto-primario);
+}
+
+.listaChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+}
+
+.dicaChips {
+  margin: 0;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.urgenciaContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-1-5) var(--espaco-2);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+  cursor: pointer;
+  transition: border-color var(--transicao-padrao);
+}
+
+.urgenciaContainer:hover {
+  border-color: var(--laranja);
+}
+
+.urgenciaCheckbox {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--laranja);
+  cursor: pointer;
+}
+
+.urgenciaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.urgenciaTitulo {
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-semibold);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-primario);
+}
+
+.urgenciaDica {
+  font-size: var(--tamanho-meta);
+  color: var(--texto-secundario);
+}
+
+.campoPrecoVender {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+}
+
+.campoPrecoVender input {
+  font-size: 24px;
+  font-weight: var(--peso-bold);
+  padding: var(--espaco-2);
+}
+
+.erro {
+  margin: 0;
+  font-size: var(--tamanho-meta);
+  color: var(--erro-texto);
+}
+
 @media (max-width: 640px) {
   .secao {
     padding: var(--espaco-2);

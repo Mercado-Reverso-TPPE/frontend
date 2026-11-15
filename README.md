@@ -192,4 +192,5 @@ O CSS importa Space Grotesk e Inter do Google Fonts; sem acesso externo, o naveg
 - O limite de rodadas de contraproposta não vem na API; a tela mostra a rodada atual e a mensagem do backend quando o limite é atingido.
 - Sem `VITE_API_URL`, conversa, negociação, notificações e histórico ficam vazios ou avisam que dependem da API; só o catálogo tem demonstração em memória.
 - Os totais do histórico vêm de `resumo` na resposta de `GET /historico` quando o backend enviar (`{ concluidas, volume, total }`). Até lá, são somados no cliente sobre as páginas já carregadas, e a tela avisa quando há mais páginas.
+- "Meus anúncios" mostra a data de publicação no lugar da validade (o backend não tem prazo de expiração do anúncio) e usa `atualizado_em` como data de encerramento.
 - `GET /ofertas/meus` não traz o título do anúncio, então "Minhas ofertas" mostra o produto ou a descrição e um link para o anúncio.
