@@ -1,14 +1,22 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { FiltrosDoFeed } from "@/api/anuncios";
+import { FILTROS_PADRAO, type FiltrosDoFeed, type TipoDoFeed } from "@/api/anuncios";
+import { contarPorCategoria } from "@/api/estatisticas";
 import { listarCategorias, RAIO_MAXIMO_KM } from "@/api/meusAnuncios";
 import { Botao, Campo } from "@/componentes/base";
+import { ISliders, IX } from "@/componentes/icones";
 import { fmtPlural } from "@/utils/formato";
 import { lerValorEmReais, valorParaCampo } from "@/utils/valores";
 import { ChipsCategoria } from "./ChipsCategoria";
 import estilos from "./Feed.module.css";
 
 const DISTANCIAS = [5, 10, 25, 50, 100, RAIO_MAXIMO_KM];
+
+const TIPOS: { valor: TipoDoFeed; rotulo: string; icone: string }[] = [
+  { valor: "todos", rotulo: "Todos", icone: "🌐" },
+  { valor: "procurando", rotulo: "Procurando", icone: "🛒" },
+  { valor: "vendendo", rotulo: "Vendendo", icone: "🏷️" },
+];
 
 interface BarraDeFiltrosProps {
   filtros: FiltrosDoFeed;
@@ -17,23 +25,57 @@ interface BarraDeFiltrosProps {
   aoAlterar: (mudancas: Partial<FiltrosDoFeed>) => void;
   temFiltroAtivo: boolean;
   aoLimpar: () => void;
+  /** Contar por categoria só quando o feed pode buscar (com a API, exige sessão e localização). */
+  habilitarContagem?: boolean;
 }
 
 /**
- * Barra fixa de filtros do feed (QRO-07): categoria, faixa de preço e
- * distância máxima. Todos combinam entre si e com a ordenação.
+ * Barra fixa de filtros do feed (QRO-07): aba (Todos / Procurando /
+ * Vendendo) e "N resultados" em cima, chips de categoria embaixo. Orçamento
+ * e distância ficam no painel "Filtros", recolhível. Todos combinam entre si
+ * e com a ordenação, e ficam na URL.
  */
-export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo, aoLimpar }: BarraDeFiltrosProps) {
+export function BarraDeFiltros({
+  filtros,
+  resultados,
+  aoAlterar,
+  temFiltroAtivo,
+  aoLimpar,
+  habilitarContagem = true,
+}: BarraDeFiltrosProps) {
   const categorias = useQuery({ queryKey: ["categorias"], queryFn: listarCategorias, staleTime: Infinity });
+  // A contagem ignora a categoria escolhida: os chips mostram quanto há em cada uma.
+  const semCategoria = { ...filtros, categoria: "", ordenacao: FILTROS_PADRAO.ordenacao };
+  const contagem = useQuery({
+    queryKey: ["anuncios", "contagem-por-categoria", semCategoria],
+    queryFn: ({ signal }) => contarPorCategoria(semCategoria, { sinal: signal }),
+    enabled: habilitarContagem,
+    retry: false,
+  });
   const [minimo, setMinimo] = useState(valorParaCampo(filtros.precoMin));
   const [maximo, setMaximo] = useState(valorParaCampo(filtros.precoMax));
+  const [distancia, setDistancia] = useState<number | null>(filtros.distanciaMaxKm);
   const [erroDePreco, setErroDePreco] = useState<string>();
+  const [painelAberto, setPainelAberto] = useState(false);
 
   // A URL pode mudar por fora (limpar filtros, voltar do detalhe).
   useEffect(() => setMinimo(valorParaCampo(filtros.precoMin)), [filtros.precoMin]);
   useEffect(() => setMaximo(valorParaCampo(filtros.precoMax)), [filtros.precoMax]);
+  useEffect(() => setDistancia(filtros.distanciaMaxKm), [filtros.distanciaMaxKm]);
 
-  const aplicarPreco = (evento: FormEvent) => {
+  // Quantos filtros do painel estão ativos (faixa de preço conta como um).
+  const filtrosPainelAtivos =
+    (filtros.precoMin !== null || filtros.precoMax !== null ? 1 : 0) + (filtros.distanciaMaxKm !== null ? 1 : 0);
+
+  // O painel é um diálogo: Esc fecha.
+  useEffect(() => {
+    if (!painelAberto) return;
+    const aoTeclar = (evento: KeyboardEvent) => evento.key === "Escape" && setPainelAberto(false);
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, [painelAberto]);
+
+  const aplicarFiltros = (evento: FormEvent) => {
     evento.preventDefault();
     const precoMin = lerValorEmReais(minimo);
     const precoMax = lerValorEmReais(maximo);
@@ -46,50 +88,134 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo,
       return;
     }
     setErroDePreco(undefined);
-    aoAlterar({ precoMin, precoMax });
+    aoAlterar({ precoMin, precoMax, distanciaMaxKm: distancia });
+    setPainelAberto(false);
+  };
+
+  const limparFiltrosDoPainel = () => {
+    setMinimo("");
+    setMaximo("");
+    setDistancia(null);
+    setErroDePreco(undefined);
+    aoAlterar({ precoMin: null, precoMax: null, distanciaMaxKm: null });
+    setPainelAberto(false);
   };
 
   return (
     <div className={estilos.barra}>
       <div className={estilos.barraFaixa}>
-        <form className={estilos.filtrosExtras} onSubmit={aplicarPreco} noValidate aria-label="Filtros de preço e distância">
-          <Campo
-            rotulo="Orçamento a partir de (R$)"
-            inputMode="decimal"
-            placeholder="0"
-            value={minimo}
-            onChange={(evento) => setMinimo(evento.target.value)}
-          />
-          <Campo
-            rotulo="Orçamento até (R$)"
-            inputMode="decimal"
-            placeholder="Sem limite"
-            value={maximo}
-            onChange={(evento) => setMaximo(evento.target.value)}
-            erro={erroDePreco}
-          />
-          <Botao type="submit" variante="secundario">
-            Aplicar preço
-          </Botao>
-          <Campo
-            como="select"
-            rotulo="Distância máxima"
-            value={filtros.distanciaMaxKm === null ? "" : String(filtros.distanciaMaxKm)}
-            onChange={(evento) => aoAlterar({ distanciaMaxKm: evento.target.value ? Number(evento.target.value) : null })}
-          >
-            <option value="">Qualquer distância</option>
-            {DISTANCIAS.map((km) => (
-              <option key={km} value={km}>
-                Até {km} km
-              </option>
-            ))}
-          </Campo>
-        </form>
-
         <div className={estilos.linhaDeTipos}>
+          <div className={estilos.tipos} role="group" aria-label="Tipo de anúncio">
+            {TIPOS.map((tipo) => (
+              <button
+                key={tipo.valor}
+                type="button"
+                className={`${estilos.tipo} ${filtros.tipo === tipo.valor ? estilos.tipoAtivo : ""}`}
+                aria-pressed={filtros.tipo === tipo.valor}
+                onClick={() => aoAlterar({ tipo: tipo.valor })}
+              >
+                <span aria-hidden="true">{tipo.icone} </span>
+                {tipo.rotulo}
+              </button>
+            ))}
+          </div>
+          <span className={estilos.separador} aria-hidden="true" />
           <span className={estilos.resultados} aria-live="polite">
             {resultados === undefined ? "Buscando anúncios…" : fmtPlural(resultados, "resultado")}
           </span>
+          <div className={estilos.acoesFiltros}>
+            <button
+              type="button"
+              className={`${estilos.gatilhoFiltros} ${filtrosPainelAtivos > 0 ? estilos.gatilhoFiltrosAtivo : ""}`}
+              onClick={() => setPainelAberto((aberto) => !aberto)}
+              aria-expanded={painelAberto}
+              aria-haspopup="dialog"
+              aria-label={filtrosPainelAtivos > 0 ? `Filtros, ${filtrosPainelAtivos} ativo(s)` : "Filtros"}
+            >
+              <ISliders size={14} />
+              <span>Filtros</span>
+              {filtrosPainelAtivos > 0 && (
+                <span className={estilos.badgeFiltros} aria-hidden="true">
+                  {filtrosPainelAtivos}
+                </span>
+              )}
+            </button>
+
+            {painelAberto && (
+              <>
+                <div
+                  className={estilos.backdropPainel}
+                  onClick={() => setPainelAberto(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  className={estilos.painelFiltros}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Filtros de orçamento e distância"
+                >
+                  <div className={estilos.painelCabecalho}>
+                    <h3 className={estilos.painelTitulo}>Filtros</h3>
+                    <button
+                      type="button"
+                      className={estilos.fecharPainel}
+                      onClick={() => setPainelAberto(false)}
+                      aria-label="Fechar filtros"
+                    >
+                      <IX size={16} />
+                    </button>
+                  </div>
+
+                  <form className={estilos.painelFormulario} onSubmit={aplicarFiltros} noValidate>
+                    <Campo
+                      rotulo="Orçamento a partir de (R$)"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={minimo}
+                      onChange={(evento) => setMinimo(evento.target.value)}
+                    />
+                    <Campo
+                      rotulo="Orçamento até (R$)"
+                      inputMode="decimal"
+                      placeholder="Sem limite"
+                      value={maximo}
+                      onChange={(evento) => setMaximo(evento.target.value)}
+                      erro={erroDePreco}
+                    />
+                    <Campo
+                      como="select"
+                      rotulo="Distância máxima"
+                      value={distancia === null ? "" : String(distancia)}
+                      onChange={(evento) =>
+                        setDistancia(evento.target.value ? Number(evento.target.value) : null)
+                      }
+                    >
+                      <option value="">Qualquer distância</option>
+                      {DISTANCIAS.map((km) => (
+                        <option key={km} value={km}>
+                          Até {km} km
+                        </option>
+                      ))}
+                    </Campo>
+
+                    <div className={estilos.painelAcoes}>
+                      <Botao
+                        type="button"
+                        variante="texto"
+                        tamanho="pequeno"
+                        onClick={limparFiltrosDoPainel}
+                      >
+                        Limpar
+                      </Botao>
+                      <Botao type="submit" tamanho="pequeno">
+                        Aplicar
+                      </Botao>
+                    </div>
+                  </form>
+                </div>
+              </>
+            )}
+          </div>
           {temFiltroAtivo && (
             <Botao variante="texto" tamanho="pequeno" onClick={aoLimpar}>
               Limpar filtros
@@ -100,6 +226,7 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo,
         <ChipsCategoria
           categorias={categorias.data ?? []}
           ativa={filtros.categoria}
+          contagem={contagem.data}
           aoSelecionar={(categoria) => aoAlterar({ categoria })}
         />
       </div>

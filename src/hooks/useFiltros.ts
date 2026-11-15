@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
-import { FILTROS_PADRAO, type FiltrosDoFeed, type OrdenacaoDoFeed } from "@/api/anuncios";
+import { FILTROS_PADRAO, type FiltrosDoFeed, type OrdenacaoDoFeed, type TipoDoFeed } from "@/api/anuncios";
 
 const ORDENACOES: OrdenacaoDoFeed[] = ["distancia", "recentes", "preco_minimo", "preco_maximo"];
+const TIPOS: TipoDoFeed[] = ["todos", "procurando", "vendendo"];
 
 const numero = (valor: string | null) => {
   if (valor === null || valor === "") return null;
@@ -12,6 +13,7 @@ const numero = (valor: string | null) => {
 
 /** Nome de cada filtro na URL. */
 const CHAVES = {
+  tipo: "tipo",
   busca: "q",
   categoria: "categoria",
   precoMin: "preco_min",
@@ -32,7 +34,9 @@ export function useFiltros() {
 
   const filtros = useMemo<FiltrosDoFeed>(() => {
     const ordenacao = parametros.get(CHAVES.ordenacao) as OrdenacaoDoFeed | null;
+    const tipo = parametros.get(CHAVES.tipo) as TipoDoFeed | null;
     return {
+      tipo: tipo && TIPOS.includes(tipo) ? tipo : FILTROS_PADRAO.tipo,
       busca: parametros.get(CHAVES.busca) ?? "",
       categoria: parametros.get(CHAVES.categoria) ?? "",
       precoMin: numero(parametros.get(CHAVES.precoMin)),
@@ -49,7 +53,10 @@ export function useFiltros() {
           const proximos = new URLSearchParams(atuais);
           for (const [campo, valor] of Object.entries(mudancas) as [keyof FiltrosDoFeed, unknown][]) {
             const chave = CHAVES[campo];
-            if (valor === null || valor === undefined || valor === "" || valor === FILTROS_PADRAO[campo]) {
+            // A aba escolhida sempre fica na URL, inclusive "todos".
+            if (campo === "tipo" && valor) {
+              proximos.set(chave, String(valor));
+            } else if (valor === null || valor === undefined || valor === "" || valor === FILTROS_PADRAO[campo]) {
               proximos.delete(chave);
             } else {
               proximos.set(chave, String(valor));
@@ -64,14 +71,20 @@ export function useFiltros() {
   );
 
   const temFiltroAtivo = (Object.keys(CHAVES) as (keyof FiltrosDoFeed)[]).some(
-    (campo) => campo !== "ordenacao" && filtros[campo] !== FILTROS_PADRAO[campo],
+    (campo) => campo !== "ordenacao" && campo !== "tipo" && filtros[campo] !== FILTROS_PADRAO[campo],
   );
+
+  // Limpar os filtros mantém a aba.
+  const limpar = () => {
+    const tipo = parametros.get(CHAVES.tipo);
+    definirParametros(new URLSearchParams(tipo ? { [CHAVES.tipo]: tipo } : {}), { replace: true });
+  };
 
   return {
     filtros,
     alterar,
     definirBusca: (busca: string) => alterar({ busca }),
-    limpar: () => definirParametros(new URLSearchParams(), { replace: true }),
+    limpar,
     temFiltroAtivo,
   };
 }

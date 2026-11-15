@@ -24,7 +24,7 @@ describe("recurso de autenticação", () => {
 
     await cadastrarConta({ nome: " Joana ", email: "j@x.com", senha: "segredo-longo", telefone: "", cidade: "", uf: "SP" });
 
-    expect(chamadas[0]?.corpo).toEqual({ nome: "Joana", email: "j@x.com", senha: "segredo-longo" });
+    expect(chamadas[0]?.corpo).toEqual({ nome: "Joana", email: "j@x.com", senha: "segredo-longo", tipo: "both" });
   });
 
   it("converte o perfil da API no usuário das telas", () => {

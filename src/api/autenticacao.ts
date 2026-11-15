@@ -3,15 +3,14 @@
  *
  * Fala com os endpoints do backend: `POST /usuarios`, `POST|DELETE /sessoes`,
  * `POST /sessoes/renovar`, `GET /perfil` e `POST /senha/redefinir[/confirmar]`.
- * Sem `VITE_API_URL`, responde com o usuário de demonstração.
  *
  * A senha só passa por aqui dentro do corpo da requisição: não vai para a URL,
  * para o armazenamento do navegador nem para logs.
  */
 
-import { api, apiConfigurada } from "./cliente";
+import { api } from "./cliente";
 import type { User } from "./tipos";
-import { ME } from "@/dados/demo";
+import { T } from "@/estilos/tokens";
 
 export interface Credenciais {
   email: string;
@@ -47,9 +46,6 @@ export interface PerfilDaApi {
   } | null;
 }
 
-const ATRASO_DEMO_MS = 400;
-const esperar = () => new Promise((resolve) => setTimeout(resolve, ATRASO_DEMO_MS));
-
 /** Iniciais exibidas no avatar: primeira e última palavra do nome. */
 export function iniciais(nome: string) {
   const partes = nome.trim().split(/\s+/).filter(Boolean);
@@ -65,7 +61,7 @@ export function usuarioDoPerfil(perfil: PerfilDaApi): User {
     id: String(perfil.id),
     name: perfil.nome,
     initials: iniciais(perfil.nome),
-    color: ME.color,
+    color: T.primary,
     rating: Number(perfil.reputacao) || 0,
     reviews: 0,
     city: perfil.localizacao?.cidade ?? "",
@@ -81,10 +77,6 @@ export function usuarioDoPerfil(perfil: PerfilDaApi): User {
 
 /** Abre a sessão e devolve os dois tokens. */
 export async function abrirSessao({ email, senha }: Credenciais): Promise<Tokens> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { acesso: "demo", renovacao: "demo" };
-  }
   const resposta = await api.post<{ access: string; refresh: string }>(
     "/sessoes",
     { email: email.trim(), password: senha },
@@ -95,7 +87,6 @@ export async function abrirSessao({ email, senha }: Credenciais): Promise<Tokens
 
 /** Troca o token de renovação por um novo par (o backend gira os dois). */
 export async function renovarTokens(renovacao: string): Promise<Tokens> {
-  if (!apiConfigurada()) return { acesso: "demo", renovacao };
   const resposta = await api.post<{ access: string; refresh?: string }>(
     "/sessoes/renovar",
     { refresh: renovacao },
@@ -106,27 +97,22 @@ export async function renovarTokens(renovacao: string): Promise<Tokens> {
 
 /** Invalida o token de renovação no servidor. */
 export async function encerrarSessao(renovacao: string): Promise<void> {
-  if (!apiConfigurada()) return;
   await api.remove<void>("/sessoes", { refresh: renovacao });
 }
 
 /** Perfil da pessoa autenticada. */
 export async function obterPerfil(): Promise<User> {
-  if (!apiConfigurada()) return ME;
   return usuarioDoPerfil(await api.get<PerfilDaApi>("/perfil"));
 }
 
 /** Cria a conta. Não abre sessão: quem chama entra em seguida. */
 export async function cadastrarConta(dados: DadosDeCadastro): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return;
-  }
   const opcional = (valor?: string) => (valor?.trim() ? valor.trim() : undefined);
   await api.post("/usuarios", {
     nome: dados.nome.trim(),
     email: dados.email.trim(),
     senha: dados.senha,
+    tipo: "both",
     telefone: opcional(dados.telefone),
     cidade: opcional(dados.cidade),
     uf: opcional(dados.cidade) ? opcional(dados.uf) : undefined,
@@ -138,10 +124,6 @@ export async function cadastrarConta(dados: DadosDeCadastro): Promise<void> {
  * então a tela também não diferencia os casos.
  */
 export async function solicitarRedefinicaoDeSenha(email: string): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return;
-  }
   await api.post("/senha/redefinir", { email: email.trim() });
 }
 
@@ -151,10 +133,6 @@ export async function confirmarRedefinicaoDeSenha(dados: {
   token: string;
   novaSenha: string;
 }): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return;
-  }
   await api.post("/senha/redefinir/confirmar", {
     uid: dados.uid,
     token: dados.token,

@@ -13,7 +13,7 @@ export function CardCompacto({ anuncio, acoes }: { anuncio: Anuncio; acoes?: Rea
     <article className={estilos.compacto}>
       <div className={estilos.compactoCapa}>
         <div className={estilos.compactoSelo}>
-          <div style={{ fontSize: 32 }} aria-hidden="true">
+          <div className={estilos.compactoIcone} aria-hidden="true">
             🛒
           </div>
           Procurando

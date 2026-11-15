@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import estilos from "./Chip.module.css";
 import { fmtCompactoDeContagem } from "./contagem";
+import { fmtPlural } from "@/utils/formato";
 
 interface ChipProps {
   children: ReactNode;
@@ -20,11 +21,14 @@ export function Chip({ children, ativo = false, contagem, onClick, title }: Chip
       onClick={onClick}
       aria-pressed={ativo}
       title={title}
+      aria-label={contagem !== undefined && typeof children === "string" ? `${children} (${fmtPlural(contagem, "anúncio")})` : undefined}
       className={`${estilos.chip} ${ativo ? estilos.ativo : ""}`}
     >
       {children}
       {contagem !== undefined && (
-        <span className={estilos.contagem}>{fmtCompactoDeContagem(contagem)}</span>
+        <span className={estilos.contagem} aria-hidden="true">
+          {fmtCompactoDeContagem(contagem)}
+        </span>
       )}
     </button>
   );

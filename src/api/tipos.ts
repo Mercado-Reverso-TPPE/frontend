@@ -1,9 +1,8 @@
 /**
  * Tipos do domínio do Quero.
  *
- * Espelham o contrato da API. Enquanto o contrato oficial não é publicado,
- * estes tipos descrevem o que as telas consomem e servem de alvo para os
- * dados de demonstração em `dados/demo.ts`.
+ * Formato que as telas consomem; os recursos em `api/` convertem as
+ * respostas do backend para estes tipos.
  */
 
 export interface User {

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import estilos from "./Estados.module.css";
 
 interface EsqueletoProps {
@@ -6,17 +7,15 @@ interface EsqueletoProps {
   arredondado?: boolean;
 }
 
+const medida = (valor: number | string) => (typeof valor === "number" ? `${valor}px` : valor);
+
 /** Bloco cinza que ocupa o espaço do conteúdo enquanto ele não chega. */
 export function Esqueleto({ largura = "100%", altura = 14, arredondado = false }: EsqueletoProps) {
   return (
     <span
-      className={estilos.esqueleto}
-      style={{
-        display: "block",
-        width: largura,
-        height: altura,
-        borderRadius: arredondado ? "var(--raio-chip)" : undefined,
-      }}
+      className={`${estilos.esqueleto} ${arredondado ? estilos.esqueletoArredondado : ""}`}
+      // Largura e altura variam por uso; o visual fica no CSS.
+      style={{ "--esqueleto-largura": medida(largura), "--esqueleto-altura": medida(altura) } as CSSProperties}
       aria-hidden="true"
     />
   );

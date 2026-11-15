@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router";
-import { apiConfigurada } from "@/api/cliente";
 import { contarNaoLidas } from "@/api/notificacoes";
 import { Avatar, Botao } from "@/componentes/base";
 import { IBell, IChevronDown, IHistory, IPackage, IPlus, ISearch, IUser } from "@/componentes/icones";
@@ -32,7 +31,7 @@ export function Cabecalho() {
   const contagem = useQuery({
     queryKey: ["notificacoes", "nao-lidas"],
     queryFn: contarNaoLidas,
-    enabled: autenticado && apiConfigurada(),
+    enabled: autenticado,
     refetchInterval: 60_000,
   });
   const naoLidas = autenticado ? (contagem.data ?? 0) : 0;
@@ -59,7 +58,7 @@ export function Cabecalho() {
             id="busca-global"
             className={estilos.campoDeBusca}
             type="search"
-            placeholder="Buscar pelo que as pessoas procuram…"
+            placeholder="Buscar por produto, categoria ou cidade..."
             value={termo}
             onChange={(evento) => setTermo(evento.target.value)}
           />
@@ -129,7 +128,7 @@ export function Cabecalho() {
                       className={estilos.opcao}
                       onClick={() => setMenuAberto(false)}
                     >
-                      <span style={{ color: T.textMid, display: "flex" }} aria-hidden="true">
+                      <span className={estilos.opcaoIcone} aria-hidden="true">
                         {opcao.icone}
                       </span>
                       {opcao.rotulo}

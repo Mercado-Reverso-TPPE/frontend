@@ -143,6 +143,7 @@ describe("cadastro", () => {
       "POST /sessoes",
       "GET /perfil",
     ]);
+    expect(chamadas[0]?.corpo).toMatchObject({ tipo: "both" });
   });
 
   it("mostra no campo o erro devolvido pela API", async () => {

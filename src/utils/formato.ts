@@ -45,6 +45,26 @@ export const fmtMetrica = (valor: number) =>
 export const fmtData = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
+/** Nota de reputação com uma casa: `4.9` → `4,9`. */
+export const fmtNota = (nota: number) =>
+  nota.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/**
+ * Tempo desde a publicação, como no protótipo: `12 min`, `1 hora`, `3 dias`.
+ * Depois de 30 dias, volta para a data.
+ */
+export function fmtTempoRelativo(iso: string, agora: number = Date.now()) {
+  const minutos = Math.floor((agora - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(minutos)) return "";
+  if (minutos < 1) return "agora";
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return horas === 1 ? "1 hora" : `${horas} horas`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 30) return dias === 1 ? "1 dia" : `${dias} dias`;
+  return fmtData(iso);
+}
+
 const BRL_EXATO = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /**
