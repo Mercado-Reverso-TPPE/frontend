@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router";
 import {
   alterarStatusDoProduto,
   criarProduto,
@@ -51,12 +52,16 @@ const mensagemDoErro = (erro: unknown, padrao: string) => {
  * Um produto em negociação muda de status junto com ela.
  */
 export default function MinhaLoja() {
+  const localizacao = useLocation();
+  const avisoDeOrigem = (localizacao.state as { aviso?: string } | null)?.aviso;
   const clienteDeConsulta = useQueryClient();
   const [filtro, setFiltro] = useState<StatusDoProduto>();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<string>();
   const [confirmacao, setConfirmacao] = useState<Confirmacao>();
-  const [resultado, setResultado] = useState<Resultado>();
+  const [resultado, setResultado] = useState<Resultado | undefined>(
+    avisoDeOrigem ? { tom: "sucesso", texto: avisoDeOrigem } : undefined,
+  );
 
   const produtos = useInfiniteQuery({
     queryKey: ["produtos", filtro ?? "todos"],
