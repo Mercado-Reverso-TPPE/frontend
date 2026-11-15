@@ -22,6 +22,8 @@ Feed integrado à API (QRO-07, QRO-09): busca, categoria, faixa de preço, dist�
 
 Abas do feed: **Todos**, **Procurando** e **Vendendo** ficam em `?tipo=` e combinam com os demais filtros. "Procurando" lê `GET /anuncios`; "Vendendo" lê `GET /vitrine` (produtos à venda com foto, conservação, visualizações e `vendedor_publico`); "Todos" intercala os dois. Enquanto o backend não publica `/vitrine`, a aba "Vendendo" fica vazia. O card "Procurando" mostra o comprador quando o item traz `comprador_publico`.
 
+Trilha de categorias e métricas do hero: o primeiro chip é **Todos** e cada chip mostra quantos anúncios há na categoria para a aba, a busca e os filtros de preço e distância atuais (a categoria escolhida não entra na conta). O hero mostra anúncios ativos, cidades cobertas e vendedores. O front já consome `GET /estatisticas` (`{ anuncios_ativos, cidades, vendedores }`) e `GET /anuncios/categorias` e `GET /vitrine/categorias` (`[{ slug, total }]`, com os mesmos filtros do feed). Enquanto essas rotas respondem 404, o hero mostra os números de demonstração e os chips aparecem sem contagem.
+
 Catálogo do vendedor integrado à API (QRO-08): cadastrar, editar e excluir produtos, mudar o status (disponível, reservado, vendido) e enviar fotos com os limites do backend (até 6, JPEG/PNG/WEBP, 5 MB cada), checados também antes do envio. Na oferta, só produtos disponíveis aparecem e escolher um preenche o formulário.
 
 Palpites e comparação integrados à API (QRO-10, QRO-11): o vendedor dá um palpite sem compromisso e pode ofertar com o mesmo valor; o comprador vê só a faixa agregada quando a API a libera. Em `/anuncios/:id/ofertas` o comprador ordena as ofertas e compara duas ou mais lado a lado; a lista só é pedida depois de confirmar que o anúncio é dele.
@@ -41,6 +43,7 @@ src/
 ├── api/                 # cliente HTTP, recursos e tipos do contrato
 │   ├── cliente.ts       # fetch com base de URL, tempo limite e ErroDeApi
 │   ├── anuncios.ts      # feed, detalhe e recomendações (com fallback de demonstração)
+│   ├── estatisticas.ts  # métricas do hero e contagem por categoria
 │   ├── autenticacao.ts  # cadastro, sessão, perfil e redefinição de senha
 │   ├── perfil.ts        # edição do perfil e troca de e-mail
 │   ├── meusAnuncios.ts  # anúncios do comprador, categorias e ações por status

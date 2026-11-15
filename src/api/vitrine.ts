@@ -117,6 +117,10 @@ function produtoDeDemo(produto: SellerAd, indice: number): ProdutoAVenda {
   };
 }
 
+/** Produtos ativos de demonstração no formato da API. */
+export const listarProdutosDeDemo = () =>
+  SELLER_ADS.filter((produto) => produto.status === "active").map(produtoDeDemo);
+
 /** A mesma regra da busca de anúncios, com o preço do produto no lugar do orçamento. */
 export function filtrarProdutos(produtos: ProdutoAVenda[], filtros: FiltrosDoFeed): ProdutoAVenda[] {
   const palavras = filtros.busca.toLowerCase().split(/\s+/).filter(Boolean);
@@ -146,7 +150,7 @@ export async function listarVitrine(
 ): Promise<PaginaDaVitrine> {
   if (!apiConfigurada()) {
     await new Promise((resolve) => setTimeout(resolve, 320));
-    const todos = filtrarProdutos(SELLER_ADS.filter((produto) => produto.status === "active").map(produtoDeDemo), filtros);
+    const todos = filtrarProdutos(listarProdutosDeDemo(), filtros);
     const inicio = cursor ? Number(cursor) : 0;
     const fim = inicio + tamanho;
     return { itens: todos.slice(inicio, fim), total: todos.length, proximo: fim < todos.length ? String(fim) : null };

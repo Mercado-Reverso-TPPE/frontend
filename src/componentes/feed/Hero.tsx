@@ -2,10 +2,8 @@ import { fmtMetrica } from "@/utils/formato";
 import estilos from "./Feed.module.css";
 
 /**
- * Faixa de abertura do feed com a assinatura da marca.
- *
- * As métricas chegam por props; hoje o feed passa os números de
- * demonstração e, com a API integrada, passará os reais.
+ * Faixa de abertura do feed com a assinatura da marca e as métricas
+ * públicas da plataforma (anúncios ativos, cidades cobertas e vendedores).
  */
 export interface MetricaDoHero {
   icone: string;
