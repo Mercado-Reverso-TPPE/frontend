@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef } from "react";
-import { Botao } from "./Botao";
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import { Botao, type VarianteDeBotao } from "./Botao";
 import estilos from "./DialogoDeConfirmacao.module.css";
 
 interface DialogoDeConfirmacaoProps {
@@ -8,12 +8,16 @@ interface DialogoDeConfirmacaoProps {
   rotuloDeConfirmar: string;
   /** Mostra o giro no botão de confirmar enquanto a ação roda. */
   ocupado?: boolean;
+  /** Ações que não destroem nada (aceitar, confirmar) usam o botão primário. */
+  varianteDeConfirmar?: Extract<VarianteDeBotao, "perigo" | "primario">;
+  /** Conteúdo extra entre a descrição e os botões, como um motivo opcional. */
+  children?: ReactNode;
   aoCancelar: () => void;
   aoConfirmar: () => void;
 }
 
 /**
- * Confirmação de ação destrutiva. Foco no diálogo ao abrir e de volta ao
+ * Confirmação de ação destrutiva ou decisiva. Foco no diálogo ao abrir e de volta ao
  * gatilho ao fechar; Esc e clique fora cancelam.
  */
 export function DialogoDeConfirmacao({
@@ -21,6 +25,8 @@ export function DialogoDeConfirmacao({
   descricao,
   rotuloDeConfirmar,
   ocupado = false,
+  varianteDeConfirmar = "perigo",
+  children,
   aoCancelar,
   aoConfirmar,
 }: DialogoDeConfirmacaoProps) {
@@ -55,11 +61,12 @@ export function DialogoDeConfirmacao({
       >
         <h2 id={idDoTitulo}>{titulo}</h2>
         <p>{descricao}</p>
+        {children && <div className={estilos.extra}>{children}</div>}
         <div className={estilos.botoes}>
           <Botao variante="secundario" onClick={aoCancelar}>
             Cancelar
           </Botao>
-          <Botao variante="perigo" carregando={ocupado} onClick={aoConfirmar}>
+          <Botao variante={varianteDeConfirmar} carregando={ocupado} onClick={aoConfirmar}>
             {rotuloDeConfirmar}
           </Botao>
         </div>

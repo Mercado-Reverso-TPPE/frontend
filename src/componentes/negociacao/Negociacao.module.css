@@ -1,0 +1,318 @@
+/* Peças compartilhadas da negociação: faixa estimada, linha do tempo, chat e comparação. */
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-3);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-card);
+  background-color: var(--fundo-elevado);
+}
+
+.secao > h2 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-h3);
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+.texto {
+  margin: 0;
+  font-size: var(--tamanho-corpo);
+  line-height: var(--altura-linha-corpo);
+  color: var(--texto-secundario);
+  white-space: pre-line;
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1-5);
+}
+
+.valor {
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-bold);
+  color: var(--sucesso-texto);
+}
+
+.valorGrande {
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-preco);
+  font-weight: var(--peso-bold);
+  color: var(--sucesso-texto);
+}
+
+/* ── Faixa estimada pelos palpites ─────────────────────────────────────── */
+
+.faixa {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espaco-1);
+  margin: 0;
+}
+
+.faixa div {
+  padding: var(--espaco-1-5);
+  border-radius: var(--raio-campo);
+  background-color: var(--superficie-suave);
+  text-align: center;
+}
+
+.faixa dt {
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.faixa dd {
+  margin: 4px 0 0;
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-bold);
+  color: var(--texto-primario);
+}
+
+/* ── Linha do tempo de valores ─────────────────────────────────────────── */
+
+.tempo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evento {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-1-5);
+  border-left: 3px solid var(--borda);
+  border-radius: 0 var(--raio-campo) var(--raio-campo) 0;
+  background-color: var(--superficie-suave);
+}
+
+.eventoMeu {
+  border-left-color: var(--laranja);
+}
+
+.eventoDeles {
+  border-left-color: var(--info);
+}
+
+.passo {
+  min-width: 28px;
+  font-family: var(--fonte-mono);
+  font-size: var(--tamanho-meta);
+  color: var(--texto-terciario);
+}
+
+.eventoCorpo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eventoCorpo strong {
+  font-family: var(--fonte-titulo);
+  font-size: 14px;
+  color: var(--texto-primario);
+}
+
+/* ── Contraproposta pendente ───────────────────────────────────────────── */
+
+.pendente {
+  padding: var(--espaco-2);
+  border: 1.5px solid var(--laranja-borda);
+  border-radius: var(--raio-card);
+  background-color: var(--laranja-claro);
+}
+
+.justificativa {
+  margin: 0;
+  padding: var(--espaco-1) var(--espaco-1-5);
+  border-left: 3px solid var(--laranja);
+  font-style: italic;
+  color: var(--texto-secundario);
+  white-space: pre-line;
+}
+
+/* ── Chat ──────────────────────────────────────────────────────────────── */
+
+.mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+  max-height: 420px;
+  margin: 0;
+  padding: var(--espaco-1);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--raio-campo);
+  background-color: var(--superficie-suave);
+}
+
+.mensagem {
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background-color: var(--fundo-elevado);
+  box-shadow: var(--sombra-sm);
+}
+
+.mensagemMinha {
+  align-self: flex-end;
+  border-radius: 16px 16px 4px 16px;
+  background-color: var(--laranja-claro);
+}
+
+.mensagem p {
+  margin: 0;
+  font-size: var(--tamanho-corpo);
+  line-height: 1.5;
+  color: var(--texto-primario);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mensagem span {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--tamanho-micro);
+  color: var(--texto-terciario);
+}
+
+.envio {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espaco-1);
+}
+
+.envio > :first-child {
+  flex: 1;
+}
+
+/* ── Comparação de ofertas ─────────────────────────────────────────────── */
+
+.tabelaRolavel {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--espaco-1);
+  border-bottom: 1px solid var(--borda-suave);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tabela thead th {
+  font-family: var(--fonte-titulo);
+  color: var(--texto-primario);
+}
+
+.tabela tbody th {
+  font-weight: var(--peso-semibold);
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+
+/* ── Produto / foto ────────────────────────────────────────────────────── */
+
+.miniatura {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--raio-campo);
+  object-fit: cover;
+  background-color: var(--superficie-suave);
+}
+
+/* ── Nota em estrelas ──────────────────────────────────────────────────── */
+
+.estrelas {
+  display: flex;
+  gap: var(--espaco-0-5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.estrelas legend {
+  margin-bottom: var(--espaco-1);
+  font-family: var(--fonte-titulo);
+  font-size: 14px;
+  font-weight: var(--peso-semibold);
+  color: var(--texto-primario);
+}
+
+.estrela {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--espaco-1);
+  border: 1.5px solid var(--borda);
+  border-radius: var(--raio-campo);
+  cursor: pointer;
+  font-size: var(--tamanho-meta);
+  color: var(--texto-secundario);
+}
+
+.estrela input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.estrela:has(input:checked) {
+  border-color: var(--laranja);
+  background-color: var(--laranja-claro);
+  color: var(--texto-primario);
+}
+
+.estrela:has(input:focus-visible) {
+  outline: var(--foco-largura) solid var(--foco-cor);
+  outline-offset: var(--foco-deslocamento);
+}
+
+.estrela span[aria-hidden] {
+  font-size: 20px;
+  color: var(--estrela);
+}
+
+@media (max-width: 640px) {
+  .secao {
+    padding: var(--espaco-2);
+  }
+
+  .faixa {
+    grid-template-columns: 1fr;
+  }
+
+  .mensagem {
+    max-width: 90%;
+  }
+}
