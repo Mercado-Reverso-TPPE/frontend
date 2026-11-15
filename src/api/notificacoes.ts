@@ -96,6 +96,44 @@ export function destinoDaNotificacao(notificacao: Notificacao): string | null {
   return null;
 }
 
+export type TomDaNotificacao = "laranja" | "lilas" | "azul" | "verde" | "vermelho" | "neutro";
+
+/**
+ * Ícone e cor do círculo de cada notificação. Aceite e recusa chegam como
+ * `negociacao_atualizada`; o título enviado pelo backend diz qual foi.
+ */
+export function visualDaNotificacao(notificacao: Pick<Notificacao, "tipo" | "titulo">): {
+  icone: string;
+  tom: TomDaNotificacao;
+} {
+  const titulo = notificacao.titulo.toLowerCase();
+  switch (notificacao.tipo) {
+    case "oferta_recebida":
+    case "oferta_atualizada":
+      return { icone: "📦", tom: "laranja" };
+    case "contraproposta_recebida":
+    case "contraproposta_vencendo":
+      return { icone: "💱", tom: "lilas" };
+    case "mensagem_recebida":
+      return { icone: "💬", tom: "azul" };
+    case "negociacao_atualizada":
+      if (titulo.includes("aceita")) return { icone: "✓", tom: "verde" };
+      if (/recusad|cancelad|expirad/.test(titulo)) return { icone: "✕", tom: "vermelho" };
+      return { icone: "🔄", tom: "azul" };
+    case "negociacao_concluida":
+      return { icone: "🤝", tom: "verde" };
+    case "avaliacao_recebida":
+      return { icone: "⭐", tom: "laranja" };
+    case "anuncio_compativel":
+    case "convite_recomendacao":
+      return { icone: "🎯", tom: "azul" };
+    case "seguranca_conta":
+      return { icone: "🔒", tom: "neutro" };
+    default:
+      return { icone: "🔔", tom: "neutro" };
+  }
+}
+
 export async function listarNotificacoes(pagina: number | string | null = 1): Promise<Pagina<Notificacao>> {
   if (!apiConfigurada()) return { itens: [], proximo: null };
   const resposta = await api.get<RespostaPaginada<NotificacaoDaApi>>("/notificacoes", {

@@ -33,7 +33,7 @@
 
 .aviso {
   background-color: color-mix(in srgb, var(--aviso) 12%, transparent);
-  color: #9A5B00;
+  color: var(--aviso-texto);
 }
 
 .neutro {

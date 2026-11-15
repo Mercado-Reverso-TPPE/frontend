@@ -17,6 +17,35 @@ export interface Categoria {
   nome: string;
 }
 
+/** Resumo público de quem publica: o que o feed pode mostrar de uma pessoa. */
+export interface PessoaPublica {
+  id: string;
+  nome: string;
+  foto: string | null;
+  /** Média das avaliações; `null` enquanto não há avaliação. */
+  nota: number | null;
+  avaliacoes: number;
+}
+
+export interface PessoaDaApi {
+  id: string | number;
+  nome: string;
+  foto?: string | null;
+  nota?: string | number | null;
+  avaliacoes?: number;
+}
+
+export const pessoaDaApi = (pessoa: PessoaDaApi | null | undefined): PessoaPublica | null =>
+  pessoa
+    ? {
+        id: String(pessoa.id),
+        nome: pessoa.nome,
+        foto: pessoa.foto || null,
+        nota: pessoa.nota === null || pessoa.nota === undefined || pessoa.nota === "" ? null : Number(pessoa.nota),
+        avaliacoes: pessoa.avaliacoes ?? 0,
+      }
+    : null;
+
 /** Anúncio de "procura-se" como a API devolve, já convertido. */
 export interface Anuncio {
   id: string;
@@ -34,8 +63,15 @@ export interface Anuncio {
   cidade: string;
   uf: string;
   criadoEm: string;
+  /** Última mudança; num anúncio encerrado, é quando ele foi encerrado. */
+  atualizadoEm?: string;
   /** Distância até a pessoa que vê; só nas buscas. */
   distanciaKm: number | null;
+  /** Resumo público do comprador; só quando a API o envia no feed. */
+  compradorPublico?: PessoaPublica | null;
+  estadoConservacao?: string[];
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 /** Na lista "Meus anúncios" o anúncio é o mesmo; o nome deixa claro de quem é. */
@@ -48,6 +84,9 @@ export interface DadosDoAnuncio {
   precoMin: number | null;
   precoMax: number | null;
   raioKm: number;
+  estadoConservacao?: string[];
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 export interface PaginaDeMeusAnuncios {
@@ -89,12 +128,23 @@ export interface AnuncioDaApi {
   cidade: string;
   uf: string;
   criado_em: string;
+  atualizado_em?: string;
   distancia_km?: number | null;
+  comprador_publico?: PessoaDaApi | null;
+  estado_conservacao?: string[] | string | null;
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 const numeroOuNulo = (valor: string | number | null) => (valor === null || valor === "" ? null : Number(valor));
 
 export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
+  const estados = Array.isArray(anuncio.estado_conservacao)
+    ? anuncio.estado_conservacao
+    : typeof anuncio.estado_conservacao === "string" && anuncio.estado_conservacao
+      ? [anuncio.estado_conservacao]
+      : [];
+
   return {
     id: anuncio.id,
     comprador: String(anuncio.comprador),
@@ -110,7 +160,12 @@ export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
     cidade: anuncio.cidade ?? "",
     uf: anuncio.uf ?? "",
     criadoEm: anuncio.criado_em,
+    atualizadoEm: anuncio.atualizado_em,
     distanciaKm: anuncio.distancia_km ?? null,
+    compradorPublico: pessoaDaApi(anuncio.comprador_publico),
+    estadoConservacao: estados,
+    foto: anuncio.foto ?? null,
+    urgente: Boolean(anuncio.urgente),
   };
 }
 
@@ -122,6 +177,11 @@ function corpoDoAnuncio(dados: DadosDoAnuncio) {
     preco_min: dados.precoMin,
     preco_max: dados.precoMax,
     raio_km: dados.raioKm,
+    ...(dados.estadoConservacao && dados.estadoConservacao.length > 0
+      ? { estado_conservacao: dados.estadoConservacao }
+      : {}),
+    ...(dados.foto ? { foto: dados.foto } : {}),
+    ...(dados.urgente ? { urgente: dados.urgente } : {}),
   };
 }
 
@@ -171,6 +231,9 @@ function demo() {
     cidade: "São Paulo",
     uf: "SP",
     criadoEm: new Date(Date.UTC(2026, 7, 31 - indice * 3)).toISOString(),
+    estadoConservacao: anuncio.conditionWanted ? [anuncio.conditionWanted] : [],
+    foto: null,
+    urgente: Boolean(anuncio.urgent),
   }));
   return anunciosDemo;
 }

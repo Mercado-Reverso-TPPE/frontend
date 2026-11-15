@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { FiltrosDoFeed } from "@/api/anuncios";
+import { FILTROS_PADRAO, type FiltrosDoFeed, type TipoDoFeed } from "@/api/anuncios";
+import { contarPorCategoria } from "@/api/estatisticas";
 import { listarCategorias, RAIO_MAXIMO_KM } from "@/api/meusAnuncios";
 import { Botao, Campo } from "@/componentes/base";
-import { IFilter, ISliders, IX } from "@/componentes/icones";
+import { ISliders, IX } from "@/componentes/icones";
 import { fmtPlural } from "@/utils/formato";
 import { lerValorEmReais, valorParaCampo } from "@/utils/valores";
 import { ChipsCategoria } from "./ChipsCategoria";
@@ -11,12 +12,11 @@ import estilos from "./Feed.module.css";
 
 const DISTANCIAS = [5, 10, 25, 50, 100, RAIO_MAXIMO_KM];
 
-const TIPOS = [
+const TIPOS: { valor: TipoDoFeed; rotulo: string; icone: string }[] = [
   { valor: "todos", rotulo: "Todos", icone: "🌐" },
   { valor: "procurando", rotulo: "Procurando", icone: "🛒" },
-] as const;
-
-type TipoDeFeed = (typeof TIPOS)[number]["valor"];
+  { valor: "vendendo", rotulo: "Vendendo", icone: "🏷️" },
+];
 
 interface BarraDeFiltrosProps {
   filtros: FiltrosDoFeed;
@@ -25,33 +25,55 @@ interface BarraDeFiltrosProps {
   aoAlterar: (mudancas: Partial<FiltrosDoFeed>) => void;
   temFiltroAtivo: boolean;
   aoLimpar: () => void;
+  /** Contar por categoria só quando o feed pode buscar (com a API, exige sessão e localização). */
+  habilitarContagem?: boolean;
 }
 
 /**
- * Barra fixa de filtros do feed (QRO-07):
- * Linha superior: seletor de tipo · contador de resultados e botão "Filtros" recolhível.
- * Linha inferior: chips de categoria.
+ * Barra fixa de filtros do feed (QRO-07): aba (Todos / Procurando /
+ * Vendendo) e "N resultados" em cima, chips de categoria embaixo. Orçamento
+ * e distância ficam no painel "Filtros", recolhível. Todos combinam entre si
+ * e com a ordenação, e ficam na URL.
  */
-export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo: _temFiltroAtivo, aoLimpar }: BarraDeFiltrosProps) {
+export function BarraDeFiltros({
+  filtros,
+  resultados,
+  aoAlterar,
+  temFiltroAtivo,
+  aoLimpar,
+  habilitarContagem = true,
+}: BarraDeFiltrosProps) {
   const categorias = useQuery({ queryKey: ["categorias"], queryFn: listarCategorias, staleTime: Infinity });
-
-  const [tipo, setTipo] = useState<TipoDeFeed>("todos");
-  const [painelAberto, setPainelAberto] = useState(false);
-
+  // A contagem ignora a categoria escolhida: os chips mostram quanto há em cada uma.
+  const semCategoria = { ...filtros, categoria: "", ordenacao: FILTROS_PADRAO.ordenacao };
+  const contagem = useQuery({
+    queryKey: ["anuncios", "contagem-por-categoria", semCategoria],
+    queryFn: ({ signal }) => contarPorCategoria(semCategoria, { sinal: signal }),
+    enabled: habilitarContagem,
+    retry: false,
+  });
   const [minimo, setMinimo] = useState(valorParaCampo(filtros.precoMin));
   const [maximo, setMaximo] = useState(valorParaCampo(filtros.precoMax));
   const [distancia, setDistancia] = useState<number | null>(filtros.distanciaMaxKm);
   const [erroDePreco, setErroDePreco] = useState<string>();
+  const [painelAberto, setPainelAberto] = useState(false);
 
-  // Sincroniza com a URL caso mude externamente
+  // A URL pode mudar por fora (limpar filtros, voltar do detalhe).
   useEffect(() => setMinimo(valorParaCampo(filtros.precoMin)), [filtros.precoMin]);
   useEffect(() => setMaximo(valorParaCampo(filtros.precoMax)), [filtros.precoMax]);
   useEffect(() => setDistancia(filtros.distanciaMaxKm), [filtros.distanciaMaxKm]);
 
-  // Contagem de filtros ativos específicos deste painel (preço e distância)
+  // Quantos filtros do painel estão ativos (faixa de preço conta como um).
   const filtrosPainelAtivos =
-    (filtros.precoMin !== null || filtros.precoMax !== null ? 1 : 0) +
-    (filtros.distanciaMaxKm !== null ? 1 : 0);
+    (filtros.precoMin !== null || filtros.precoMax !== null ? 1 : 0) + (filtros.distanciaMaxKm !== null ? 1 : 0);
+
+  // O painel é um diálogo: Esc fecha.
+  useEffect(() => {
+    if (!painelAberto) return;
+    const aoTeclar = (evento: KeyboardEvent) => evento.key === "Escape" && setPainelAberto(false);
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, [painelAberto]);
 
   const aplicarFiltros = (evento: FormEvent) => {
     evento.preventDefault();
@@ -83,30 +105,24 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo:
     <div className={estilos.barra}>
       <div className={estilos.barraFaixa}>
         <div className={estilos.linhaDeTipos}>
-          {/* Seletor de tipo */}
           <div className={estilos.tipos} role="group" aria-label="Tipo de anúncio">
-            {TIPOS.map((opcao) => (
+            {TIPOS.map((tipo) => (
               <button
-                key={opcao.valor}
+                key={tipo.valor}
                 type="button"
-                className={`${estilos.tipo} ${tipo === opcao.valor ? estilos.tipoAtivo : ""}`}
-                aria-pressed={tipo === opcao.valor}
-                onClick={() => setTipo(opcao.valor)}
+                className={`${estilos.tipo} ${filtros.tipo === tipo.valor ? estilos.tipoAtivo : ""}`}
+                aria-pressed={filtros.tipo === tipo.valor}
+                onClick={() => aoAlterar({ tipo: tipo.valor })}
               >
-                <span aria-hidden="true">{opcao.icone} </span>
-                {opcao.rotulo}
+                <span aria-hidden="true">{tipo.icone} </span>
+                {tipo.rotulo}
               </button>
             ))}
           </div>
-
           <span className={estilos.separador} aria-hidden="true" />
-
-          {/* Contador de resultados */}
           <span className={estilos.resultados} aria-live="polite">
             {resultados === undefined ? "Buscando anúncios…" : fmtPlural(resultados, "resultado")}
           </span>
-
-          {/* Botão e Painel de Filtros recolhível */}
           <div className={estilos.acoesFiltros}>
             <button
               type="button"
@@ -200,12 +216,17 @@ export function BarraDeFiltros({ filtros, resultados, aoAlterar, temFiltroAtivo:
               </>
             )}
           </div>
+          {temFiltroAtivo && (
+            <Botao variante="texto" tamanho="pequeno" onClick={aoLimpar}>
+              Limpar filtros
+            </Botao>
+          )}
         </div>
 
-        {/* Chips de categorias */}
         <ChipsCategoria
           categorias={categorias.data ?? []}
           ativa={filtros.categoria}
+          contagem={contagem.data}
           aoSelecionar={(categoria) => aoAlterar({ categoria })}
         />
       </div>

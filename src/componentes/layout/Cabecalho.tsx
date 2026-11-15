@@ -127,7 +127,7 @@ export function Cabecalho() {
                       className={estilos.opcao}
                       onClick={() => setMenuAberto(false)}
                     >
-                      <span style={{ color: T.textMid, display: "flex" }} aria-hidden="true">
+                      <span className={estilos.opcaoIcone} aria-hidden="true">
                         {opcao.icone}
                       </span>
                       {opcao.rotulo}
