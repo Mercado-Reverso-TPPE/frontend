@@ -380,3 +380,125 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Painel "Filtros" (orçamento e distância): popover no desktop, folha inferior no celular. */
+.acoesFiltros {
+  position: relative;
+  margin-left: auto;
+}
+
+.gatilhoFiltros {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espaco-0-5);
+  padding: 7px 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-chip);
+  background-color: var(--fundo-elevado);
+  color: var(--texto-primario);
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-meta);
+  font-weight: var(--peso-semibold);
+  cursor: pointer;
+  transition: border-color var(--transicao), background-color var(--transicao);
+}
+
+.gatilhoFiltros:hover {
+  border-color: var(--laranja-borda);
+}
+
+.gatilhoFiltrosAtivo {
+  border-color: var(--laranja);
+  background-color: var(--laranja-claro);
+  color: var(--laranja);
+}
+
+.badgeFiltros {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background-color: var(--laranja);
+  color: var(--texto-invertido);
+  font-size: var(--tamanho-micro);
+  font-weight: var(--peso-bold);
+}
+
+.backdropPainel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-flutuante);
+}
+
+.painelFiltros {
+  position: absolute;
+  top: calc(100% + var(--espaco-1));
+  right: 0;
+  z-index: calc(var(--z-flutuante) + 1);
+  width: 320px;
+  padding: var(--espaco-2);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-modal);
+  background-color: var(--fundo-elevado);
+  box-shadow: var(--sombra-md);
+}
+
+.painelCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--espaco-1-5);
+}
+
+.painelTitulo {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: var(--tamanho-h3);
+  font-weight: var(--peso-bold);
+}
+
+.fecharPainel {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--raio-botao);
+  background: transparent;
+  color: var(--texto-secundario);
+  cursor: pointer;
+}
+
+.fecharPainel:hover {
+  background-color: var(--superficie-suave);
+}
+
+.painelFormulario {
+  display: grid;
+  gap: var(--espaco-1-5);
+}
+
+.painelAcoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espaco-1);
+  padding-top: var(--espaco-0-5);
+}
+
+@media (max-width: 640px) {
+  .backdropPainel {
+    background-color: rgb(0 0 0 / 0.35);
+  }
+
+  .painelFiltros {
+    position: fixed;
+    inset: auto 0 0;
+    top: auto;
+    width: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: var(--raio-modal) var(--raio-modal) 0 0;
+  }
+}

@@ -127,6 +127,7 @@ export async function cadastrarConta(dados: DadosDeCadastro): Promise<void> {
     nome: dados.nome.trim(),
     email: dados.email.trim(),
     senha: dados.senha,
+    tipo: "both",
     telefone: opcional(dados.telefone),
     cidade: opcional(dados.cidade),
     uf: opcional(dados.cidade) ? opcional(dados.uf) : undefined,
