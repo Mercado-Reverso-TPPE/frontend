@@ -140,3 +140,8 @@ img {
   margin: 0 auto;
   padding-inline: var(--respiro-lateral);
 }
+
+/* Página simples dentro de .conteudo, com respiro vertical. */
+.conteudo-com-respiro {
+  padding-block: var(--espaco-4);
+}

@@ -6,12 +6,9 @@
  * mensagem, e este módulo também não tem. A negociação nasce no aceite e
  * segue em `/negociacoes/:id` (conclusão bilateral e cancelamento); depois de
  * encerrada, aparece em `/historico`.
- *
- * Sem `VITE_API_URL`, as listas vêm vazias e o resto responde que depende da
- * API: nenhuma tela simula uma transação persistida.
  */
 
-import { api, apiConfigurada, ErroDeApi } from "./cliente";
+import { api } from "./cliente";
 import { paginaDe, type Pagina, type RespostaPaginada } from "./paginacao";
 import type { Papel, StatusDaOferta, TipoDeEvento } from "./ofertas";
 
@@ -183,14 +180,6 @@ const negociacaoDetalhadaDaApi = (negociacao: NegociacaoDetalhadaDaApi): Negocia
   mensagens: (negociacao.mensagens ?? []).map(mensagemDaApi),
 });
 
-function semApi(): never {
-  throw new ErroDeApi("A negociação depende da API. Defina VITE_API_URL para integrar o backend.", {
-    codigo: "sem-api",
-  });
-}
-
-const vazia = <T>(): Pagina<T> => ({ itens: [], proximo: null });
-
 /** Percorre as páginas de uma lista até achar o item (ou acabar o limite). */
 async function procurarNasPaginas<T>(
   carregar: (cursor: string | null) => Promise<Pagina<T>>,
@@ -211,7 +200,6 @@ async function procurarNasPaginas<T>(
 // ── Conversas (QRO-14) ──────────────────────────────────────────────────────
 
 export async function listarConversas(cursor?: string | null): Promise<Pagina<Conversa>> {
-  if (!apiConfigurada()) return vazia();
   const resposta = await api.get<RespostaPaginada<ConversaDaApi>>("/conversas", {
     parametros: { cursor: cursor ?? undefined },
   });
@@ -223,13 +211,11 @@ export async function listarConversas(cursor?: string | null): Promise<Pagina<Co
  * percorre a lista — é dela que vêm papel, contraparte e `somente_leitura`.
  */
 export async function obterConversa(ofertaId: string): Promise<Conversa | null> {
-  if (!apiConfigurada()) return null;
   return procurarNasPaginas(listarConversas, (conversa) => conversa.id === ofertaId);
 }
 
 /** Todas as mensagens da conversa, da mais antiga para a mais recente. */
 export async function listarMensagens(ofertaId: string): Promise<Mensagem[]> {
-  if (!apiConfigurada()) return [];
   const mensagens: Mensagem[] = [];
   let cursor: string | null = null;
   for (let pagina = 0; pagina < 20; pagina += 1) {
@@ -245,41 +231,34 @@ export async function listarMensagens(ofertaId: string): Promise<Mensagem[]> {
 }
 
 export async function enviarMensagem(ofertaId: string, texto: string): Promise<Mensagem> {
-  if (!apiConfigurada()) semApi();
   return mensagemDaApi(await api.post<MensagemDaApi>(`/conversas/${ofertaId}/mensagens`, { texto: texto.trim() }));
 }
 
 export async function marcarConversaComoLida(ofertaId: string): Promise<void> {
-  if (!apiConfigurada()) return;
   await api.post(`/conversas/${ofertaId}/leitura`);
 }
 
 // ── Negociação e conclusão (QRO-15, QRO-16) ─────────────────────────────────
 
 export async function obterNegociacao(id: string): Promise<Negociacao> {
-  if (!apiConfigurada()) semApi();
   return negociacaoDaApi(await api.get<NegociacaoDaApi>(`/negociacoes/${id}`));
 }
 
 /** O vendedor marca a venda como concluída; o comprador recebe o pedido de confirmação. */
 export async function solicitarConclusao(id: string): Promise<Negociacao> {
-  if (!apiConfigurada()) semApi();
   return negociacaoDaApi(await api.post<NegociacaoDaApi>(`/negociacoes/${id}/conclusao`));
 }
 
 export async function confirmarConclusao(id: string): Promise<Negociacao> {
-  if (!apiConfigurada()) semApi();
   return negociacaoDaApi(await api.post<NegociacaoDaApi>(`/negociacoes/${id}/conclusao/confirmacao`));
 }
 
 export async function recusarConclusao(id: string): Promise<Negociacao> {
-  if (!apiConfigurada()) semApi();
   return negociacaoDaApi(await api.post<NegociacaoDaApi>(`/negociacoes/${id}/conclusao/recusa`));
 }
 
 /** Cancela a negociação em andamento; o anúncio volta a aceitar ofertas. */
 export async function cancelarNegociacao(id: string): Promise<void> {
-  if (!apiConfigurada()) semApi();
   await api.post(`/negociacoes/${id}/cancelar`);
 }
 
@@ -290,19 +269,54 @@ export interface FiltrosDoHistorico {
   status?: Exclude<StatusDaNegociacao, "em_andamento">;
 }
 
+/** Totais do histórico para os filtros pedidos. */
+export interface ResumoDoHistorico {
+  concluidas: number;
+  /** Soma do valor final das negociações concluídas. */
+  volume: number;
+  total: number;
+}
+
+export interface PaginaDoHistorico extends Pagina<Negociacao> {
+  /** Totais vindos da API, quando ela os envia (`resumo`); senão, a tela soma o que carregou. */
+  resumo?: ResumoDoHistorico;
+}
+
+interface ResumoDaApi {
+  concluidas: number;
+  volume: string | number;
+  total: number;
+}
+
 export async function listarHistorico(
   filtros: FiltrosDoHistorico = {},
   cursor?: string | null,
-): Promise<Pagina<Negociacao>> {
-  if (!apiConfigurada()) return vazia();
-  const resposta = await api.get<RespostaPaginada<NegociacaoDaApi>>("/historico", {
+): Promise<PaginaDoHistorico> {
+  const resposta = await api.get<RespostaPaginada<NegociacaoDaApi> & { resumo?: ResumoDaApi }>("/historico", {
     parametros: { papel: filtros.papel, status: filtros.status, cursor: cursor ?? undefined },
   });
-  return paginaDe(resposta, negociacaoDaApi);
+  const pagina: PaginaDoHistorico = paginaDe(resposta, negociacaoDaApi);
+  if (resposta.resumo) {
+    pagina.resumo = {
+      concluidas: Number(resposta.resumo.concluidas),
+      volume: Number(resposta.resumo.volume),
+      total: Number(resposta.resumo.total),
+    };
+  }
+  return pagina;
+}
+
+/** Totais calculados sobre as negociações já carregadas. */
+export function resumirHistorico(negociacoes: Negociacao[]): ResumoDoHistorico {
+  const concluidas = negociacoes.filter((negociacao) => negociacao.status === "concluida");
+  return {
+    concluidas: concluidas.length,
+    volume: concluidas.reduce((soma, negociacao) => soma + negociacao.valorFinal, 0),
+    total: negociacoes.length,
+  };
 }
 
 export async function obterHistorico(id: string): Promise<NegociacaoDetalhada> {
-  if (!apiConfigurada()) semApi();
   return negociacaoDetalhadaDaApi(await api.get<NegociacaoDetalhadaDaApi>(`/historico/${id}`));
 }
 
@@ -311,7 +325,6 @@ export async function obterHistorico(id: string): Promise<NegociacaoDetalhada> {
 export const COMENTARIO_MAXIMO = 2000;
 
 export async function avaliarNegociacao(id: string, nota: number, comentario = ""): Promise<void> {
-  if (!apiConfigurada()) semApi();
   await api.post(`/negociacoes/${id}/avaliacoes`, { nota, comentario: comentario.trim() });
 }
 
@@ -332,7 +345,6 @@ interface NotificacaoComVinculo {
  */
 export async function localizarNegociacao(ofertaId: string, negociacaoConhecida?: string | null): Promise<string | null> {
   if (negociacaoConhecida) return negociacaoConhecida;
-  if (!apiConfigurada()) return null;
 
   const encerrada = await procurarNasPaginas(
     (cursor) => listarHistorico({}, cursor),

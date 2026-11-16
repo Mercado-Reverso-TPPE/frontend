@@ -8,7 +8,7 @@
  * função que as peça.
  */
 
-import { api, apiConfigurada, ErroDeApi } from "./cliente";
+import { api } from "./cliente";
 import { cursorDe } from "./paginacao";
 
 export type EstadoDeConservacao = "novo" | "seminovo" | "usado_bom" | "usado_marcas" | "pecas";
@@ -184,112 +184,28 @@ const corpoDaOferta = (dados: Partial<DadosDaOferta>) => ({
   ...(dados.produtoId ? { produto_id: dados.produtoId } : {}),
 });
 
-// ── Demonstração ────────────────────────────────────────────────────────────
-
-let ofertasDemo: Oferta[] = [];
-
-export function reiniciarDemoDeOfertas() {
-  ofertasDemo = [];
-}
-
-const esperar = () => new Promise((resolve) => setTimeout(resolve, 250));
-
-function encontrarDemo(id: string) {
-  const oferta = ofertasDemo.find((item) => item.id === id);
-  if (!oferta) throw new ErroDeApi("Não encontramos esta oferta.", { status: 404 });
-  return oferta;
-}
-
-function recusarDemo(mensagem: string): never {
-  throw new ErroDeApi(mensagem, { status: 400, detalhes: [mensagem] });
-}
-
 // ── Recursos ────────────────────────────────────────────────────────────────
 
 /** A oferta da própria pessoa neste anúncio, se houver uma ainda em jogo. */
 export async function minhaOfertaNoAnuncio(anuncioId: string): Promise<Oferta | null> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return ofertasDemo.find((oferta) => oferta.anuncioId === anuncioId && ofertaAtiva(oferta)) ?? null;
-  }
   const resposta = await api.get<{ results: OfertaDaApi[] }>(`/anuncios/${anuncioId}/ofertas`);
   return resposta.results.map(ofertaDaApi).find(ofertaAtiva) ?? null;
 }
 
 export async function enviarOferta(anuncioId: string, dados: DadosDaOferta): Promise<Oferta> {
-  if (!apiConfigurada()) {
-    await esperar();
-    if (ofertasDemo.some((oferta) => oferta.anuncioId === anuncioId && ofertaAtiva(oferta))) {
-      recusarDemo("Você já tem uma oferta ativa neste anúncio.");
-    }
-    const agora = new Date().toISOString();
-    const nova: Oferta = {
-      descricao: dados.descricao,
-      estadoDeConservacao: dados.estadoDeConservacao,
-      preco: dados.preco,
-      id: `oferta-${Date.now()}`,
-      anuncioId,
-      vendedorId: "",
-      vendedorNome: "",
-      produtoId: dados.produtoId ?? null,
-      produtoNome: "",
-      produtoFoto: null,
-      status: "enviada",
-      criadaEm: agora,
-      atualizadaEm: agora,
-      negociacaoId: null,
-      historico: [
-        {
-          id: 1,
-          autorId: "",
-          preco: dados.preco,
-          status: "enviada",
-          tipo: "enviada",
-          justificativa: "",
-          texto: "",
-          rodada: 0,
-          expiraEm: null,
-          respondidaEm: null,
-          resultado: null,
-          registradoEm: agora,
-        },
-      ],
-    };
-    ofertasDemo.unshift(nova);
-    return nova;
-  }
   return ofertaDaApi(await api.post<OfertaDaApi>(`/anuncios/${anuncioId}/ofertas`, corpoDaOferta(dados)));
 }
 
 export async function editarOferta(id: string, dados: DadosDaOferta): Promise<Oferta> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const oferta = encontrarDemo(id);
-    if (!podeAlterarOferta(oferta.status)) recusarDemo("Esta oferta não pode mais ser alterada.");
-    const { produtoId: _ignorado, ...campos } = dados;
-    Object.assign(oferta, campos);
-    return { ...oferta };
-  }
   // O produto de uma oferta enviada não pode ser trocado: `produto_id` fica de fora.
   return ofertaDaApi(await api.patch<OfertaDaApi>(`/ofertas/${id}`, corpoDaOferta({ ...dados, produtoId: undefined })));
 }
 
 export async function retirarOferta(id: string): Promise<void> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const oferta = encontrarDemo(id);
-    if (!podeAlterarOferta(oferta.status)) recusarDemo("Esta oferta não pode mais ser retirada.");
-    oferta.status = "retirada";
-    return;
-  }
   await api.remove<void>(`/ofertas/${id}`);
 }
 
 export async function listarMinhasOfertas(cursor?: string | null): Promise<PaginaDeOfertas> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { itens: ofertasDemo.map((oferta) => ({ ...oferta })), proximo: null };
-  }
   const resposta = await api.get<{ next: string | null; results: OfertaDaApi[] }>("/ofertas/meus", {
     parametros: { cursor: cursor ?? undefined },
   });
@@ -323,23 +239,12 @@ const negociacaoAbertaDaApi = (negociacao: NegociacaoAbertaDaApi): NegociacaoAbe
   status: negociacao.status,
 });
 
-function semApi(): never {
-  throw new ErroDeApi(
-    "A negociação depende da API. Defina VITE_API_URL para integrar o backend.",
-    { codigo: "sem-api" },
-  );
-}
-
 /**
  * Ofertas que o comprador recebeu no próprio anúncio. Só deve ser chamada
  * para o dono do anúncio: para qualquer outra pessoa a API devolve apenas a
  * oferta dela, e a tela não usa este recurso fora desse caso.
  */
 export async function listarOfertasRecebidas(anuncioId: string, cursor?: string | null): Promise<PaginaDeOfertas> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { itens: [], proximo: null };
-  }
   const resposta = await api.get<{ next: string | null; results: OfertaDaApi[] }>(`/anuncios/${anuncioId}/ofertas`, {
     parametros: { cursor: cursor ?? undefined },
   });
@@ -347,20 +252,14 @@ export async function listarOfertasRecebidas(anuncioId: string, cursor?: string 
 }
 
 export async function obterOferta(id: string): Promise<Oferta> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { ...encontrarDemo(id) };
-  }
   return ofertaDaApi(await api.get<OfertaDaApi>(`/ofertas/${id}`));
 }
 
 export async function aceitarOferta(id: string): Promise<NegociacaoAberta> {
-  if (!apiConfigurada()) semApi();
   return negociacaoAbertaDaApi(await api.post<NegociacaoAbertaDaApi>(`/ofertas/${id}/aceitar`));
 }
 
 export async function recusarOferta(id: string, justificativa = ""): Promise<Oferta> {
-  if (!apiConfigurada()) semApi();
   return ofertaDaApi(await api.post<OfertaDaApi>(`/ofertas/${id}/recusar`, { justificativa: justificativa.trim() }));
 }
 
@@ -371,7 +270,6 @@ export interface DadosDaContraproposta {
 }
 
 export async function enviarContraproposta(id: string, dados: DadosDaContraproposta): Promise<EventoDaOferta> {
-  if (!apiConfigurada()) semApi();
   return eventoDaApi(
     await api.post<EventoDaApi>(`/ofertas/${id}/contrapropostas`, {
       preco: dados.preco.toFixed(2),
@@ -390,7 +288,6 @@ export type RespostaAContraproposta =
  * da resposta; a tela mostra a mensagem da API e recarrega o histórico.
  */
 export async function responderContraproposta(id: string, resposta: RespostaAContraproposta): Promise<Oferta> {
-  if (!apiConfigurada()) semApi();
   const corpo =
     resposta.acao === "contrapropor"
       ? { acao: "contrapropor", preco: resposta.preco.toFixed(2), texto: resposta.texto?.trim() ?? "" }
@@ -427,10 +324,6 @@ interface EstimativaDaApi {
 }
 
 export async function obterEstimativaDePreco(anuncioId: string): Promise<EstimativaDePreco> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { disponivel: false };
-  }
   const resposta = await api.get<EstimativaDaApi>(`/anuncios/${anuncioId}/estimativa-preco`);
   if (!resposta.disponivel) return { disponivel: false };
   return {
@@ -444,10 +337,6 @@ export async function obterEstimativaDePreco(anuncioId: string): Promise<Estimat
 
 /** Registra ou substitui o palpite da pessoa. Não cria oferta. */
 export async function enviarPalpite(anuncioId: string, valor: number): Promise<number> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return valor;
-  }
   const resposta = await api.post<{ valor: string | number }>(`/anuncios/${anuncioId}/palpite`, {
     valor: valor.toFixed(2),
   });

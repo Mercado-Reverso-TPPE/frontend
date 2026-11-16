@@ -5,7 +5,6 @@ import type { ReactElement, ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { ProvedorDeSessao } from "@/hooks/useSessao";
 import { rotas } from "@/rotas";
-import { ME } from "@/dados/demo";
 import type { User } from "@/api/tipos";
 
 /** Cliente de consulta isolado por teste: sem cache compartilhado nem retry. */
@@ -62,5 +61,17 @@ export function renderizarAplicacao({
   return { ...resultado, roteador, cliente };
 }
 
-/** Usuário de demonstração, para testes que precisam de sessão aberta. */
-export const usuarioDeTeste = ME;
+/** Usuário com sessão aberta e localização, para os testes. */
+export const usuarioDeTeste: User = {
+  id: "me",
+  name: "Maria S.",
+  initials: "MS",
+  color: "var(--laranja)",
+  rating: 4.9,
+  reviews: 34,
+  city: "São Paulo",
+  state: "SP",
+  phone: "(11) 98765-4321",
+  role: "both",
+  joinedAt: "Mar 2024",
+};

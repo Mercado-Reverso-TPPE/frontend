@@ -31,8 +31,30 @@ const CATEGORIAS = [
   { slug: "games", nome: "Games" },
 ];
 
-/** Backend com um feed de `total` anúncios, paginado de 12 em 12. */
-function apiComFeed(total = 3) {
+const produto = (id: string, nome: string, dados: Record<string, unknown> = {}) => ({
+  id,
+  nome,
+  descricao: "Produto à venda",
+  categoria: "games",
+  categoria_nome: "Games",
+  preco: "3200.00",
+  estado_conservacao: "seminovo",
+  foto: null,
+  cidade: "Brasília",
+  uf: "DF",
+  distancia_km: 4.8,
+  visualizacoes: 10,
+  criado_em: "2026-10-20T15:00:00Z",
+  vendedor_publico: { id: "v1", nome: "Bruno Kato", nota: "5.0" },
+  ...dados,
+});
+
+/** Backend com um feed de `total` anúncios, paginado de 12 em 12, e uma vitrine opcional. */
+function apiComFeed(
+  total = 3,
+  produtos: ReturnType<typeof produto>[] | null = null,
+  extras: Parameters<typeof simularApi>[0] = {},
+) {
   const todos = Array.from({ length: total }, (_, indice) => anuncio(`a${indice + 1}`, `Anúncio ${indice + 1}`));
   return simularApi({
     "GET /categorias": () => ({ corpo: CATEGORIAS }),
@@ -49,22 +71,37 @@ function apiComFeed(total = 3) {
       };
     },
     "GET /anuncios/a1": () => ({ corpo: todos[0] }),
+    ...(produtos && {
+      "GET /vitrine": (_corpo: unknown, chamada: { parametros: Record<string, string> }) => {
+        const filtrados = produtos.filter(
+          (item) => !chamada.parametros.categoria || item.categoria === chamada.parametros.categoria,
+        );
+        return { corpo: { count: filtrados.length, next: null, results: filtrados } };
+      },
+    }),
+    ...extras,
   });
 }
+
+/** Botão de uma aba (Todos / Procurando / Vendendo), sem confundir com o chip "Todos". */
+const aba = (nome: string) =>
+  within(screen.getByRole("group", { name: "Tipo de anúncio" })).getByRole("button", { name: nome });
 
 const chamadasDoFeed = (chamadas: ReturnType<typeof simularApi>) =>
   chamadas.filter((chamada) => chamada.caminho === "/anuncios" && chamada.parametros.tamanho === "12");
 
-describe("feed de anúncios (demonstração)", () => {
+describe("feed de anúncios", () => {
   it("mostra o esqueleto de carregamento antes dos anúncios", async () => {
-    renderizarAplicacao();
+    apiComFeed(2);
+    renderizarAplicacao({ usuario });
 
-    expect(screen.getByText("Carregando anúncios…")).toBeInTheDocument();
-    expect((await screen.findAllByText("iPhone 15 Pro Max 256GB")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Carregando anúncios…")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
   });
 
   it("explica o próximo passo quando a busca não encontra nada", async () => {
-    renderizarAplicacao({ rota: "/?q=zepelim%20de%20borracha" });
+    apiComFeed(0);
+    renderizarAplicacao({ rota: "/?q=zepelim%20de%20borracha", usuario });
 
     expect(await screen.findByRole("heading", { name: "Nenhum anúncio encontrado" })).toBeInTheDocument();
     expect(screen.getByText(/Tente outra categoria, aumente a distância/)).toBeInTheDocument();
@@ -72,11 +109,15 @@ describe("feed de anúncios (demonstração)", () => {
     expect(screen.getAllByRole("button", { name: "Limpar filtros" }).length).toBeGreaterThan(0);
   });
 
-  it("não tem aba de anúncios de venda", async () => {
-    renderizarAplicacao();
-    await screen.findAllByText("iPhone 15 Pro Max 256GB");
+  it("intercala pedidos e produtos na aba Todos", async () => {
+    apiComFeed(2, [produto("p1", "PlayStation 5"), produto("p2", "Xbox Series X")]);
+    renderizarAplicacao({ usuario });
+    await screen.findByRole("heading", { name: "4 anúncios" });
 
-    expect(screen.queryByRole("button", { name: /Vendendo/ })).not.toBeInTheDocument();
+    expect(aba("Todos")).toHaveAttribute("aria-pressed", "true");
+    const [primeiro, segundo] = screen.getAllByRole("article");
+    expect(within(primeiro!).getByText("Procurando")).toBeInTheDocument();
+    expect(within(segundo!).getByText("Vendendo")).toBeInTheDocument();
   });
 });
 
@@ -111,9 +152,10 @@ describe("feed de anúncios (API)", () => {
     await screen.findByRole("heading", { name: "3 anúncios" });
 
     await userEvent.click(await screen.findByRole("button", { name: "Esportes" }));
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     await userEvent.selectOptions(screen.getByLabelText("Distância máxima"), "25");
     await userEvent.type(screen.getByLabelText(/Orçamento até/), "3.000");
-    await userEvent.click(screen.getByRole("button", { name: "Aplicar preço" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
     await userEvent.selectOptions(screen.getByLabelText("Ordenar:"), "recentes");
 
     await waitFor(() =>
@@ -142,12 +184,30 @@ describe("feed de anúncios (API)", () => {
     const { roteador } = renderizarAplicacao({ usuario });
     await screen.findByRole("heading", { name: "3 anúncios" });
 
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
     await userEvent.type(screen.getByLabelText(/Orçamento a partir/), "500");
     await userEvent.type(screen.getByLabelText(/Orçamento até/), "100");
-    await userEvent.click(screen.getByRole("button", { name: "Aplicar preço" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
 
     expect(screen.getByText("O máximo precisa ser maior ou igual ao mínimo.")).toBeInTheDocument();
     expect(roteador.state.location.search).toBe("");
+  });
+
+  it("limpa os filtros do painel e fecha ao clicar em Limpar", async () => {
+    apiComFeed();
+    const { roteador } = renderizarAplicacao({ rota: "/?distancia=25&preco_max=1000", usuario });
+    await screen.findByRole("heading", { name: "3 anúncios" });
+
+    // Botão exibe badge com 2 filtros ativos
+    const botaoFiltros = screen.getByRole("button", { name: /Filtros/ });
+    expect(botaoFiltros).toBeInTheDocument();
+
+    await userEvent.click(botaoFiltros);
+    await userEvent.click(screen.getByRole("button", { name: "Limpar" }));
+
+    await waitFor(() => {
+      expect(roteador.state.location.search).toBe("");
+    });
   });
 
   it("carrega mais anúncios pelo cursor", async () => {
@@ -182,18 +242,128 @@ describe("feed de anúncios (API)", () => {
 });
 
 describe("recomendações", () => {
-  it("convidam a ofertar ou podem ser descartadas, sem criar oferta", async () => {
+  it("não mostram nada inventado enquanto o backend não recomenda para quem vende", async () => {
+    apiComFeed(2);
     renderizarAplicacao({ usuario });
-    const carrossel = within(await screen.findByRole("region", { name: "Recomendados para você" }));
 
-    const [primeiroConvite] = carrossel.getAllByRole("link", { name: /Fazer oferta em/ });
-    expect(primeiroConvite).toHaveAttribute("href", expect.stringMatching(/^\/anuncios\/.+\/ofertar$/));
+    await screen.findByRole("heading", { name: "2 anúncios" });
+    expect(screen.queryByRole("region", { name: "Recomendados para você" })).not.toBeInTheDocument();
+  });
+});
 
-    const descartes = carrossel.getAllByRole("button", { name: /Descartar recomendação/ });
-    const nome = descartes[0]!.getAttribute("aria-label")!.replace("Descartar recomendação ", "");
-    await userEvent.click(descartes[0]!);
+describe("abas Todos / Procurando / Vendendo", () => {
+  const vitrine = [produto("p1", "PS5 Slim"), produto("p2", "Bike Scott", { categoria: "esportes", categoria_nome: "Esportes" })];
 
-    expect(carrossel.queryByRole("button", { name: `Descartar recomendação ${nome}` })).not.toBeInTheDocument();
-    expect(localStorage.getItem("quero.recomendacoes.descartadas")).toContain('"');
+  it("troca a aba, guarda na URL e mostra só o tipo escolhido", async () => {
+    const chamadas = apiComFeed(3, vitrine);
+    const { roteador } = renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
+    expect(screen.getByText("5 resultados")).toBeInTheDocument();
+    expect(aba("Todos")).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(aba("Vendendo"));
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(screen.getByText("2 resultados")).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=vendendo");
+    expect(aba("Vendendo")).toHaveAttribute("aria-pressed", "true");
+    const cardsVendendo = screen.getAllByRole("article").filter((card) => !card.closest("section"));
+    expect(cardsVendendo).toHaveLength(2);
+    cardsVendendo.forEach((card) => expect(within(card).getByText("Vendendo")).toBeInTheDocument());
+
+    await userEvent.click(aba("Procurando"));
+    expect(await screen.findByRole("heading", { name: "3 anúncios" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=procurando");
+    screen
+      .getAllByRole("article")
+      .filter((card) => !card.closest("section"))
+      .forEach((card) => expect(within(card).queryByText("Vendendo")).not.toBeInTheDocument());
+
+    await userEvent.click(aba("Todos"));
+    expect(await screen.findByRole("heading", { name: "5 anúncios" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=todos");
+    expect(chamadas.some((chamada) => chamada.caminho === "/vitrine")).toBe(true);
+  });
+
+  it("combina a aba com categoria, busca e ordenação e mantém a aba ao limpar", async () => {
+    const chamadas = apiComFeed(3, vitrine);
+    const { roteador } = renderizarAplicacao({ rota: "/?tipo=vendendo&q=bike&ordenar=recentes", usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(aba("Vendendo")).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Esportes" }));
+    expect(await screen.findByRole("heading", { name: "1 anúncio" })).toBeInTheDocument();
+    expect(screen.getByText("1 resultado")).toBeInTheDocument();
+    expect(Object.fromEntries(new URLSearchParams(roteador.state.location.search))).toEqual({
+      tipo: "vendendo",
+      q: "bike",
+      ordenar: "recentes",
+      categoria: "esportes",
+    });
+    expect(chamadas.filter((chamada) => chamada.caminho === "/vitrine").at(-1)?.parametros).toMatchObject({
+      q: "bike",
+      categoria: "esportes",
+      ordenacao: "recentes",
+    });
+    expect(chamadas.some((chamada) => chamada.caminho === "/anuncios" && chamada.parametros.tamanho === "12")).toBe(false);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Limpar filtros" })[0]!);
+    await waitFor(() => expect(roteador.state.location.search).toBe("?tipo=vendendo"));
+  });
+
+  it("sem a vitrine no backend, Vendendo fica vazio e Todos mostra os pedidos", async () => {
+    apiComFeed(2);
+    const { roteador } = renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    await userEvent.click(aba("Vendendo"));
+
+    expect(await screen.findByRole("heading", { name: "Nenhum anúncio encontrado" })).toBeInTheDocument();
+    expect(roteador.state.location.search).toBe("?tipo=vendendo");
+  });
+});
+
+describe("trilha de categorias e métricas do hero", () => {
+  const vitrine = [produto("p1", "PS5 Slim"), produto("p2", "Bike Scott", { categoria: "esportes", categoria_nome: "Esportes" })];
+  const categorias = () => within(screen.getByRole("group", { name: "Categorias" }));
+  const metricas = () => within(screen.getByRole("region", { name: /Você anuncia o que quer/ }));
+
+  it("conta por categoria respeitando a aba e a busca", async () => {
+    const chamadas = apiComFeed(3, vitrine, {
+      "GET /estatisticas": () => ({ corpo: { anuncios_ativos: 1520, cidades: 42, vendedores: 12345 } }),
+      "GET /anuncios/categorias": () => ({ corpo: [{ slug: "esportes", total: 3 }] }),
+      "GET /vitrine/categorias": () => ({
+        corpo: [
+          { slug: "games", total: 1 },
+          { slug: "esportes", total: 1 },
+        ],
+      }),
+    });
+    renderizarAplicacao({ rota: "/?q=bike", usuario });
+
+    expect(await categorias().findByRole("button", { name: "Todos (5 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Esportes (4 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Games (1 anúncio)" })).toBeInTheDocument();
+    expect(metricas().getByText("1.520")).toBeInTheDocument();
+    expect(metricas().getByText("42")).toBeInTheDocument();
+    expect(metricas().getByText("12,3k")).toBeInTheDocument();
+    expect(chamadas.find((chamada) => chamada.caminho === "/anuncios/categorias")?.parametros).toMatchObject({ q: "bike" });
+
+    await userEvent.click(aba("Procurando"));
+    expect(await categorias().findByRole("button", { name: "Todos (3 anúncios)" })).toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Games (0 anúncios)" })).toBeInTheDocument();
+  });
+
+  it("se as métricas ou a contagem falham, não inventa números", async () => {
+    apiComFeed(2, null, {
+      "GET /estatisticas": () => ({ status: 503, corpo: { detail: "Indisponível." } }),
+    });
+    renderizarAplicacao({ usuario });
+
+    expect(await screen.findByRole("heading", { name: "2 anúncios" })).toBeInTheDocument();
+    expect(metricas().queryByText("anúncios ativos")).not.toBeInTheDocument();
+    expect(categorias().getByRole("button", { name: "Todos" })).toBeInTheDocument();
+    expect(await categorias().findByRole("button", { name: "Esportes" })).toBeInTheDocument();
   });
 });

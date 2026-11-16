@@ -3,12 +3,9 @@
  *
  * Endpoints: `GET /categorias`, `GET /anuncios/meus`, `GET /anuncios/:id?meus=true`,
  * `POST /anuncios`, `PATCH /anuncios/:id` e `PATCH /anuncios/:id/status`.
- * Sem `VITE_API_URL`, um armazenamento em memória faz o papel do backend,
- * semeado com os dados de demonstração.
  */
 
-import { api, apiConfigurada, ErroDeApi } from "./cliente";
-import { CATEGORIES, ME, MY_ADS } from "@/dados/demo";
+import { api } from "./cliente";
 
 export type StatusDoAnuncio = "ativo" | "pausado" | "em_negociacao" | "encerrado";
 
@@ -16,6 +13,35 @@ export interface Categoria {
   slug: string;
   nome: string;
 }
+
+/** Resumo público de quem publica: o que o feed pode mostrar de uma pessoa. */
+export interface PessoaPublica {
+  id: string;
+  nome: string;
+  foto: string | null;
+  /** Média das avaliações; `null` enquanto não há avaliação. */
+  nota: number | null;
+  avaliacoes: number;
+}
+
+export interface PessoaDaApi {
+  id: string | number;
+  nome: string;
+  foto?: string | null;
+  nota?: string | number | null;
+  avaliacoes?: number;
+}
+
+export const pessoaDaApi = (pessoa: PessoaDaApi | null | undefined): PessoaPublica | null =>
+  pessoa
+    ? {
+        id: String(pessoa.id),
+        nome: pessoa.nome,
+        foto: pessoa.foto || null,
+        nota: pessoa.nota === null || pessoa.nota === undefined || pessoa.nota === "" ? null : Number(pessoa.nota),
+        avaliacoes: pessoa.avaliacoes ?? 0,
+      }
+    : null;
 
 /** Anúncio de "procura-se" como a API devolve, já convertido. */
 export interface Anuncio {
@@ -34,8 +60,15 @@ export interface Anuncio {
   cidade: string;
   uf: string;
   criadoEm: string;
+  /** Última mudança; num anúncio encerrado, é quando ele foi encerrado. */
+  atualizadoEm?: string;
   /** Distância até a pessoa que vê; só nas buscas. */
   distanciaKm: number | null;
+  /** Resumo público do comprador; só quando a API o envia no feed. */
+  compradorPublico?: PessoaPublica | null;
+  estadoConservacao?: string[];
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 /** Na lista "Meus anúncios" o anúncio é o mesmo; o nome deixa claro de quem é. */
@@ -48,6 +81,9 @@ export interface DadosDoAnuncio {
   precoMin: number | null;
   precoMax: number | null;
   raioKm: number;
+  estadoConservacao?: string[];
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 export interface PaginaDeMeusAnuncios {
@@ -89,12 +125,23 @@ export interface AnuncioDaApi {
   cidade: string;
   uf: string;
   criado_em: string;
+  atualizado_em?: string;
   distancia_km?: number | null;
+  comprador_publico?: PessoaDaApi | null;
+  estado_conservacao?: string[] | string | null;
+  foto?: string | null;
+  urgente?: boolean;
 }
 
 const numeroOuNulo = (valor: string | number | null) => (valor === null || valor === "" ? null : Number(valor));
 
 export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
+  const estados = Array.isArray(anuncio.estado_conservacao)
+    ? anuncio.estado_conservacao
+    : typeof anuncio.estado_conservacao === "string" && anuncio.estado_conservacao
+      ? [anuncio.estado_conservacao]
+      : [];
+
   return {
     id: anuncio.id,
     comprador: String(anuncio.comprador),
@@ -110,7 +157,12 @@ export function anuncioDaApi(anuncio: AnuncioDaApi): Anuncio {
     cidade: anuncio.cidade ?? "",
     uf: anuncio.uf ?? "",
     criadoEm: anuncio.criado_em,
+    atualizadoEm: anuncio.atualizado_em,
     distanciaKm: anuncio.distancia_km ?? null,
+    compradorPublico: pessoaDaApi(anuncio.comprador_publico),
+    estadoConservacao: estados,
+    foto: anuncio.foto ?? null,
+    urgente: Boolean(anuncio.urgente),
   };
 }
 
@@ -122,6 +174,11 @@ function corpoDoAnuncio(dados: DadosDoAnuncio) {
     preco_min: dados.precoMin,
     preco_max: dados.precoMax,
     raio_km: dados.raioKm,
+    ...(dados.estadoConservacao && dados.estadoConservacao.length > 0
+      ? { estado_conservacao: dados.estadoConservacao }
+      : {}),
+    ...(dados.foto ? { foto: dados.foto } : {}),
+    ...(dados.urgente ? { urgente: dados.urgente } : {}),
   };
 }
 
@@ -135,8 +192,7 @@ function cursorDe(proxima: string | null) {
   }
 }
 
-// ── Demonstração ────────────────────────────────────────────────────────────
-
+/** `"Casa & Jardim"` → `"casa-jardim"`. */
 export const slug = (nome: string) =>
   nome
     .normalize("NFD")
@@ -145,62 +201,14 @@ export const slug = (nome: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const CATEGORIAS_DEMO: Categoria[] = CATEGORIES.filter((categoria) => categoria.id !== "all").map((categoria) => ({
-  slug: slug(categoria.label),
-  nome: categoria.label,
-}));
-
-const STATUS_DEMO = { active: "ativo", paused: "pausado", closed: "encerrado" } as const;
-
-let anunciosDemo: MeuAnuncio[] | null = null;
-
-function demo() {
-  anunciosDemo ??= MY_ADS.map((anuncio, indice) => ({
-    id: `demo-${anuncio.id}`,
-    comprador: ME.id,
-    distanciaKm: null,
-    titulo: anuncio.title,
-    categoria: slug(anuncio.category),
-    categoriaNome: anuncio.category,
-    descricao: anuncio.description,
-    precoMin: anuncio.budget.min,
-    precoMax: anuncio.budget.max,
-    raioKm: anuncio.radius,
-    status: STATUS_DEMO[anuncio.status],
-    ofertasRecebidas: anuncio.offers,
-    cidade: "São Paulo",
-    uf: "SP",
-    criadoEm: new Date(Date.UTC(2026, 7, 31 - indice * 3)).toISOString(),
-  }));
-  return anunciosDemo;
-}
-
-/** Volta o armazenamento de demonstração ao estado inicial (testes). */
-export function reiniciarDemoDeMeusAnuncios() {
-  anunciosDemo = null;
-}
-
-const esperar = () => new Promise((resolve) => setTimeout(resolve, 250));
-
-function encontrarDemo(id: string) {
-  const anuncio = demo().find((item) => item.id === id);
-  if (!anuncio) throw new ErroDeApi("Não encontramos este anúncio.", { status: 404 });
-  return anuncio;
-}
-
 // ── Recursos ────────────────────────────────────────────────────────────────
 
 export async function listarCategorias(): Promise<Categoria[]> {
-  if (!apiConfigurada()) return CATEGORIAS_DEMO;
   const resposta = await api.get<Categoria[] | { results: Categoria[] }>("/categorias");
   return Array.isArray(resposta) ? resposta : resposta.results;
 }
 
 export async function listarMeusAnuncios(cursor?: string | null): Promise<PaginaDeMeusAnuncios> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { itens: [...demo()], proximo: null };
-  }
   const resposta = await api.get<{ next: string | null; results: AnuncioDaApi[] }>("/anuncios/meus", {
     parametros: { cursor: cursor ?? undefined },
   });
@@ -208,46 +216,14 @@ export async function listarMeusAnuncios(cursor?: string | null): Promise<Pagina
 }
 
 export async function obterMeuAnuncio(id: string): Promise<MeuAnuncio> {
-  if (!apiConfigurada()) {
-    await esperar();
-    return { ...encontrarDemo(id) };
-  }
   return anuncioDaApi(await api.get<AnuncioDaApi>(`/anuncios/${id}`, { parametros: { meus: "true" } }));
 }
 
 export async function publicarAnuncio(dados: DadosDoAnuncio, local: { cidade: string; uf: string }): Promise<MeuAnuncio> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const novo: MeuAnuncio = {
-      ...dados,
-      id: `demo-${Date.now()}`,
-      comprador: ME.id,
-      distanciaKm: null,
-      categoriaNome: CATEGORIAS_DEMO.find((categoria) => categoria.slug === dados.categoria)?.nome ?? dados.categoria,
-      status: "ativo",
-      ofertasRecebidas: 0,
-      cidade: local.cidade,
-      uf: local.uf,
-      criadoEm: new Date().toISOString(),
-    };
-    demo().unshift(novo);
-    return novo;
-  }
   return anuncioDaApi(await api.post<AnuncioDaApi>("/anuncios", corpoDoAnuncio(dados)));
 }
 
 export async function editarAnuncio(id: string, dados: DadosDoAnuncio): Promise<MeuAnuncio> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const anuncio = encontrarDemo(id);
-    if (!acoesPermitidas(anuncio.status).includes("editar")) {
-      throw new ErroDeApi("Anúncios encerrados não podem ser alterados.", { status: 400, detalhes: ["Anúncios encerrados não podem ser alterados."] });
-    }
-    Object.assign(anuncio, dados, {
-      categoriaNome: CATEGORIAS_DEMO.find((categoria) => categoria.slug === dados.categoria)?.nome ?? dados.categoria,
-    });
-    return { ...anuncio };
-  }
   return anuncioDaApi(await api.patch<AnuncioDaApi>(`/anuncios/${id}`, corpoDoAnuncio(dados)));
 }
 
@@ -255,11 +231,5 @@ export async function alterarStatusDoAnuncio(
   id: string,
   status: Exclude<StatusDoAnuncio, "em_negociacao">,
 ): Promise<MeuAnuncio> {
-  if (!apiConfigurada()) {
-    await esperar();
-    const anuncio = encontrarDemo(id);
-    anuncio.status = status;
-    return { ...anuncio };
-  }
   return anuncioDaApi(await api.patch<AnuncioDaApi>(`/anuncios/${id}/status`, { status }));
 }
