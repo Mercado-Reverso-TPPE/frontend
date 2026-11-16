@@ -162,9 +162,10 @@ A interface fica em <http://localhost:5173>. O Compose sobe somente o frontend. 
 O frontend é publicado na Vercel com uma conta/time **do grupo**, não com a conta pessoal de um integrante.
 
 - **Produção:** <https://quero-frontend-flax.vercel.app> (atualize aqui se o domínio mudar).
+- **API:** o backend está em <https://quero-backend-client-1276.vercel.app>. O `vercel.json` repassa `/api/*` do domínio do frontend para lá, e o build usa `VITE_API_URL=/api/v1`: as chamadas saem da mesma origem, sem depender de CORS.
 - **Quem administra:** o time do grupo na Vercel, criado com o e-mail compartilhado do grupo. Todos os integrantes entram como membros do time; ninguém usa conta pessoal para publicar.
 - **Como publica:** `.github/workflows/deploy.yml` usa a Vercel CLI (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). Cada PR ganha um deploy de preview com a URL comentada no próprio PR; cada merge na `main` vai para produção. O caminho pela CLI evita a restrição do plano Hobby para repositórios de organização.
-- **SPA:** `vercel.json` reescreve todas as rotas para `/index.html`, então recarregar `/perfil` ou abrir o link de e-mail `/redefinir-senha?...` não dá 404. Os arquivos de `/assets` vão com cache longo, porque o nome já muda a cada build.
+- **SPA:** fora `/api/*`, `vercel.json` reescreve todas as rotas para `/index.html`, então recarregar `/perfil` ou abrir o link de e-mail `/redefinir-senha?...` não dá 404. Os arquivos de `/assets` vão com cache longo, porque o nome já muda a cada build.
 - **Build:** framework Vite, `pnpm build`, saída `dist`, Node 22 (`engines` no `package.json`, igual ao `.mise.toml`) e pnpm pela versão de `packageManager`.
 
 ### Configuração inicial (uma vez, pelo grupo)
@@ -172,7 +173,7 @@ O frontend é publicado na Vercel com uma conta/time **do grupo**, não com a co
 1. Criar a conta na Vercel com o e-mail do grupo, criar um time e convidar os integrantes.
 2. No time, criar o projeto apontando para este repositório (ou, se a importação não for permitida no plano, criar o projeto vazio com `vercel link` numa cópia local).
 3. Em **Settings → Environment Variables** do projeto, cadastrar para *Production* e *Preview*:
-   - `VITE_API_URL` — base da API em produção, com `/api/v1`;
+   - `VITE_API_URL` — `/api/v1` (relativa: passa pelo proxy do `vercel.json`; se o backend mudar de endereço, troque o destino da regra `/api/*`);
    - `VITE_API_TIMEOUT` — opcional, em ms (padrão 15000).
 4. Criar um token em **Account Settings → Tokens** (escopo: o time do grupo) e cadastrar no GitHub, em **Settings → Secrets and variables → Actions**: `VERCEL_TOKEN`, `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` (os dois ids estão em `.vercel/project.json` depois do `vercel link`).
 5. Pedir ao backend que inclua o domínio da Vercel em `CORS_ALLOWED_ORIGINS` e use esse domínio em `PASSWORD_RESET_URL` (`/redefinir-senha`) e `EMAIL_CHANGE_URL` (`/confirmar-email`).
@@ -234,7 +235,7 @@ O backend aceita 5 logins por minuto e 30 requisições anônimas por hora por I
 
 Os testes não deixam dados ativos: anúncios criados levam o prefixo `[E2E]` e uma fixture encerra, ao final, qualquer um que tenha ficado ativo ou pausado; o telefone volta ao valor original. Em falha, capturas de tela, HTML, console e URL vão para `e2e/artefatos/`.
 
-O workflow `.github/workflows/e2e.yml` roda à mão (**Actions → E2E → Run workflow**, com URL opcional) e depois de cada deploy de produção bem-sucedido, e publica `e2e/artefatos/` como artefato quando algum teste falha. Segredos: `E2E_EMAIL` e `E2E_SENHA`; variável opcional `E2E_BASE_URL`.
+O workflow `.github/workflows/e2e.yml` roda à mão (**Actions → E2E → Run workflow**, com URL opcional) e depois de cada deploy de produção bem-sucedido, venha ele do workflow **Deploy** ou da integração Git da Vercel (evento `deployment_status` no ambiente *Production*), e publica `e2e/artefatos/` como artefato quando algum teste falha. Segredos: `E2E_EMAIL` e `E2E_SENHA`; variável opcional `E2E_BASE_URL`.
 
 ## Configuração
 

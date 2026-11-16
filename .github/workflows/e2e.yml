@@ -11,10 +11,13 @@ on:
       base_url:
         description: URL alvo (vazio usa a produção)
         required: false
+  # Deploy pelo workflow deste repositório (.github/workflows/deploy.yml)…
   workflow_run:
     workflows: [Deploy]
     types: [completed]
     branches: [main]
+  # …ou pela integração Git da Vercel, que publica o status do deploy no GitHub.
+  deployment_status:
 
 concurrency:
   group: e2e
@@ -26,7 +29,11 @@ permissions:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
     defaults:
       run:
         working-directory: e2e
