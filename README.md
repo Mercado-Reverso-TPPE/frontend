@@ -161,7 +161,7 @@ A interface fica em <http://localhost:5173>. O Compose sobe somente o frontend. 
 
 O frontend é publicado na Vercel com uma conta/time **do grupo**, não com a conta pessoal de um integrante.
 
-- **Produção:** <https://quero-frontend.vercel.app> (atualize aqui se o domínio mudar).
+- **Produção:** <https://quero-frontend-flax.vercel.app> (atualize aqui se o domínio mudar).
 - **Quem administra:** o time do grupo na Vercel, criado com o e-mail compartilhado do grupo. Todos os integrantes entram como membros do time; ninguém usa conta pessoal para publicar.
 - **Como publica:** `.github/workflows/deploy.yml` usa a Vercel CLI (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`). Cada PR ganha um deploy de preview com a URL comentada no próprio PR; cada merge na `main` vai para produção. O caminho pela CLI evita a restrição do plano Hobby para repositórios de organização.
 - **SPA:** `vercel.json` reescreve todas as rotas para `/index.html`, então recarregar `/perfil` ou abrir o link de e-mail `/redefinir-senha?...` não dá 404. Os arquivos de `/assets` vão com cache longo, porque o nome já muda a cada build.

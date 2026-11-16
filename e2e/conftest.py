@@ -20,7 +20,7 @@ from selenium import webdriver
 
 from paginas import Cabecalho, Entrar, MeusAnuncios
 
-URL_DE_PRODUCAO = "https://quero-frontend.vercel.app"
+URL_DE_PRODUCAO = "https://quero-frontend-flax.vercel.app"
 PREFIXO_DE_TESTE = "[E2E]"
 ARTEFATOS = Path(os.environ.get("E2E_ARTEFATOS", Path(__file__).parent / "artefatos"))
 

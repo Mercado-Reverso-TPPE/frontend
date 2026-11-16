@@ -32,6 +32,8 @@ class Entrar(Pagina):
         try:
             cabecalho.esperar_logado()
         except TimeoutException:
+            if self.caminho_atual != "/entrar":
+                raise  # saiu da tela de login: o problema não é o limite de tentativas
             time.sleep(ESPERA_DO_LIMITE_DE_LOGIN)
             self.entrar(email, senha)
             cabecalho.esperar_logado()

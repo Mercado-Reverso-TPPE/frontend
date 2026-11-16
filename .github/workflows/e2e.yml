@@ -31,7 +31,7 @@ jobs:
       run:
         working-directory: e2e
     env:
-      E2E_BASE_URL: ${{ inputs.base_url || vars.E2E_BASE_URL || 'https://quero-frontend.vercel.app' }}
+      E2E_BASE_URL: ${{ inputs.base_url || vars.E2E_BASE_URL || 'https://quero-frontend-flax.vercel.app' }}
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_SENHA: ${{ secrets.E2E_SENHA }}
     steps:
