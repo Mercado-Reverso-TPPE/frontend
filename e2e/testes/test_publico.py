@@ -60,4 +60,4 @@ def test_recarregar_rota_profunda_nao_da_404(driver, base_url, rota):
 
     corpo = driver.find_element(By.TAG_NAME, "body").text
     assert "404: NOT_FOUND" not in corpo
-    assert "Quero" in driver.title
+    assert "quero." in driver.title
