@@ -182,7 +182,7 @@ describe("convite para entrar", () => {
     apiPublica();
     renderizarAplicacao();
 
-    const convite = await screen.findByRole("region", { name: "Entre e o Quero. trabalha por você" });
+    const convite = await screen.findByRole("region", { name: "Entre e o quero. trabalha por você" });
     expect(within(convite).getByText(/Anuncie o que quer comprar/)).toBeInTheDocument();
     expect(within(convite).getByText(/pedidos perto de você/)).toBeInTheDocument();
     expect(within(convite).getByText(/indicações conforme seus interesses/)).toBeInTheDocument();
@@ -195,7 +195,7 @@ describe("convite para entrar", () => {
     renderizarAplicacao({ usuario });
 
     await waitFor(() => expect(chamadas.some((chamada) => chamada.caminho === "/anuncios")).toBe(true));
-    expect(screen.queryByRole("region", { name: "Entre e o Quero. trabalha por você" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Entre e o quero. trabalha por você" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Localidade" })).not.toBeInTheDocument();
     expect(chamadas.some((chamada) => chamada.caminho === "/anuncios/publicos")).toBe(false);
   });

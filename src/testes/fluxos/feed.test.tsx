@@ -128,7 +128,7 @@ describe("feed de anúncios (API)", () => {
     });
     renderizarAplicacao();
 
-    expect(await screen.findByRole("heading", { name: "Entre e o Quero. trabalha por você" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entre e o quero. trabalha por você" })).toBeInTheDocument();
     expect(chamadas.some((chamada) => chamada.caminho === "/anuncios")).toBe(false);
   });
 

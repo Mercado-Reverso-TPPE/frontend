@@ -1,5 +1,5 @@
 /**
- * Tipos do domínio do Quero.
+ * Tipos do domínio do quero.
  *
  * Formato que as telas consomem; os recursos em `api/` convertem as
  * respostas do backend para estes tipos.

@@ -14,7 +14,7 @@ export default function LayoutAutenticacao() {
         <Outlet />
       </main>
 
-      <p className={estilos.assinatura}>© {new Date().getFullYear()} Quero. Plataforma de compras reversa.</p>
+      <p className={estilos.assinatura}>© {new Date().getFullYear()} quero. Plataforma de compras reversa.</p>
     </div>
   );
 }
