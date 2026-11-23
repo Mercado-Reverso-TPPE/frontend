@@ -8,3 +8,11 @@ export function destinoSeguro(valor: string | null | undefined, padrao = "/") {
   if (/^\/(entrar|cadastrar|redefinir-senha|confirmar-email)(\/|\?|$)/.test(valor)) return padrao;
   return valor;
 }
+
+/** Link para entrar e voltar a `destino` depois (QRO-02). */
+export const entrarComRetorno = (destino: string) =>
+  destino === "/" ? "/entrar" : `/entrar?retorno=${encodeURIComponent(destino)}`;
+
+/** Link para criar conta e voltar a `destino` depois. */
+export const cadastrarComRetorno = (destino: string) =>
+  destino === "/" ? "/cadastrar" : `/cadastrar?retorno=${encodeURIComponent(destino)}`;
