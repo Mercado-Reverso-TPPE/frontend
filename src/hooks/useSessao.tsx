@@ -131,7 +131,11 @@ export function ProvedorDeSessao({
       guardarTokens(null);
       throw erro;
     }
-  }, []);
+    // O que foi lido como visitante não vale para a sessão: a home pública sai
+    // do cache e o resto é recarregado já com o token.
+    clienteDeConsulta.removeQueries({ queryKey: ["anuncios", "publico"] });
+    await clienteDeConsulta.invalidateQueries();
+  }, [clienteDeConsulta]);
 
   const sair = useCallback(async () => {
     const renovacao = lerRenovacao();

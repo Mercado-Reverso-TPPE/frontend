@@ -5,7 +5,8 @@ import { Botao } from "@/componentes/base";
 import {
   BarraDeFiltros,
   Carrossel,
-  FaixaDeConversao,
+  ConviteDiscreto,
+  ConviteParaEntrar,
   GradeDeAnuncios,
   Hero,
   ResumoDaLista,
@@ -13,17 +14,29 @@ import {
 import type { MetricaDoHero } from "@/componentes/feed";
 import { ErroAoCarregar, EsqueletoDeAnuncios, EstadoVazio } from "@/componentes/estado";
 import type { EstatisticasPublicas } from "@/api/estatisticas";
-import { useEstatisticas, useFeed, usePertoDeVoce, useRecomendacoes } from "@/hooks/useAnuncios";
+import { ordenacaoPublica } from "@/api/anunciosPublicos";
+import {
+  useEstatisticas,
+  useFeed,
+  useFeedPublico,
+  usePertoDeVoce,
+  useRecomendacoes,
+} from "@/hooks/useAnuncios";
 import { useFiltros } from "@/hooks/useFiltros";
 import { useSessao } from "@/hooks/useSessao";
+import { cadastrarComRetorno, entrarComRetorno } from "@/utils/navegacao";
 import estilos from "./Feed.module.css";
 
 /**
  * Feed — tela inicial (QRO-07, QRO-09).
  *
  * Aba (Todos / Procurando / Vendendo), filtros e ordenação vivem na URL e
- * combinam entre si; a lista carrega por páginas. Com a API, o feed exige sessão e localização: o backend só mostra
- * anúncios cujo raio alcança quem busca.
+ * combinam entre si; a lista carrega por páginas. Para quem entrou, o
+ * backend só mostra anúncios cujo raio alcança a localização do perfil.
+ *
+ * Sem sessão, a mesma tela vira a home pública: "procura-se" ativos do Brasil
+ * inteiro ou de uma UF (`?uf=`), cards só com o superficial e convite para
+ * entrar. A aba Vendendo só convida a entrar.
  */
 
 const metricasDoHero = (estatisticas?: EstatisticasPublicas): MetricaDoHero[] =>
@@ -61,9 +74,115 @@ function useDescartadas() {
   return { descartadas, descartar };
 }
 
+/** Quantos cards antes da chamada discreta para entrar, na home pública. */
+const CARDS_ANTES_DO_CONVITE = 6;
+
+function FeedPublico({ metricas }: { metricas: MetricaDoHero[] }) {
+  const localizacao = useLocation();
+  const { filtros, alterar, limpar } = useFiltros();
+  const retorno = `${localizacao.pathname}${localizacao.search}`;
+  const filtrosPublicos = {
+    ...filtros,
+    tipo: filtros.tipo === "vendendo" ? ("vendendo" as const) : ("procurando" as const),
+    distanciaMaxKm: null,
+    ordenacao: ordenacaoPublica(filtros.ordenacao),
+  };
+  const naVitrine = filtrosPublicos.tipo === "vendendo";
+  const feed = useFeedPublico(filtrosPublicos, !naVitrine);
+
+  const itens = feed.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const total = feed.data?.pages[0]?.total;
+  // A distância não vale para o visitante: só contam UF, busca, categoria e preço.
+  const temFiltroPublico =
+    filtros.uf !== "" ||
+    filtros.busca !== "" ||
+    filtros.categoria !== "" ||
+    filtros.precoMin !== null ||
+    filtros.precoMax !== null;
+
+  return (
+    <>
+      <Hero metricas={metricas} />
+
+      <div className={`conteudo ${estilos.convite}`}>
+        <ConviteParaEntrar retorno={retorno} />
+      </div>
+
+      <BarraDeFiltros
+        publico
+        filtros={filtrosPublicos}
+        resultados={naVitrine ? undefined : feed.isPending ? undefined : total}
+        aoAlterar={alterar}
+        temFiltroAtivo={temFiltroPublico}
+        aoLimpar={limpar}
+      />
+
+      <div className={`conteudo ${estilos.corpo}`}>
+        {naVitrine ? (
+          <EstadoVazio
+            icone="🔒"
+            titulo="Entre para ver produtos à venda perto de você"
+            descricao="A vitrine mostra o que vendedores da sua região têm à pronta-entrega, filtrado pela localização do seu cadastro."
+            acao={{ rotulo: "Entrar", para: entrarComRetorno(retorno) }}
+            acaoSecundaria={{ rotulo: "Criar conta", para: cadastrarComRetorno(retorno) }}
+          />
+        ) : (
+          <>
+            {feed.isPending && <EsqueletoDeAnuncios />}
+
+            {feed.isError && (
+              <ErroAoCarregar titulo="Não foi possível carregar os anúncios" erro={feed.error} aoTentarDeNovo={() => feed.refetch()} />
+            )}
+
+            {feed.isSuccess && itens.length === 0 && (
+              <EstadoVazio
+                titulo="Nenhum anúncio encontrado"
+                descricao={
+                  temFiltroPublico
+                    ? "Nenhum pedido corresponde a estes filtros. Tente outro estado, outra categoria ou amplie a faixa de preço."
+                    : "Ainda não há pedidos publicados. Crie uma conta e seja o primeiro a anunciar o que procura."
+                }
+                acao={{ rotulo: "Publicar o que eu quero", para: entrarComRetorno("/anunciar") }}
+                acaoSecundaria={temFiltroPublico ? { rotulo: "Limpar filtros", aoClicar: limpar } : undefined}
+              />
+            )}
+
+            {itens.length > 0 && total !== undefined && (
+              <div className={estilos.blocos}>
+                <div>
+                  <ResumoDaLista
+                    total={total}
+                    ordenacao={filtrosPublicos.ordenacao}
+                    aoMudarOrdenacao={(ordenacao) => alterar({ ordenacao })}
+                    semDistancia
+                  />
+                  <GradeDeAnuncios publico itens={itens.slice(0, CARDS_ANTES_DO_CONVITE)} />
+                </div>
+
+                {itens.length > CARDS_ANTES_DO_CONVITE && <ConviteDiscreto retorno={retorno} />}
+
+                <GradeDeAnuncios publico itens={itens.slice(CARDS_ANTES_DO_CONVITE)} />
+
+                {feed.hasNextPage && (
+                  <div className={estilos.carregarMais}>
+                    <Botao variante="secundario" carregando={feed.isFetchingNextPage} onClick={() => feed.fetchNextPage()}>
+                      Carregar mais anúncios
+                    </Botao>
+                  </div>
+                )}
+
+                <ConviteDiscreto retorno={retorno} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Feed() {
   const { autenticado, verificando, usuario } = useSessao();
-  const localizacao = useLocation();
   const { filtros, alterar, limpar, temFiltroAtivo } = useFiltros();
 
   // O backend só devolve o que alcança quem busca: exige sessão e localização.
@@ -85,28 +204,19 @@ export default function Feed() {
 
   const metricas = metricasDoHero(useEstatisticas());
 
-  if (!podeBuscar && !verificando) {
-    const retorno = encodeURIComponent(`${localizacao.pathname}${localizacao.search}`);
+  if (!autenticado && !verificando) return <FeedPublico metricas={metricas} />;
+
+  if (semLocalizacao) {
     return (
       <>
         <Hero metricas={metricas} />
         <div className="conteudo conteudo-com-respiro">
-          {semLocalizacao ? (
-            <EstadoVazio
-              icone="📍"
-              titulo="Falta sua localização"
-              descricao="O feed mostra anúncios cujo raio alcança você. Cadastre seu CEP ou cidade no perfil para ver o que procuram por perto."
-              acao={{ rotulo: "Cadastrar localização", para: "/perfil" }}
-            />
-          ) : (
-            <EstadoVazio
-              icone="🔐"
-              titulo="Entre para ver anúncios perto de você"
-              descricao="O feed usa a sua localização para mostrar só o que está ao seu alcance."
-              acao={{ rotulo: "Entrar", para: `/entrar?retorno=${retorno}` }}
-              acaoSecundaria={{ rotulo: "Criar conta", para: `/cadastrar?retorno=${retorno}` }}
-            />
-          )}
+          <EstadoVazio
+            icone="📍"
+            titulo="Falta sua localização"
+            descricao="O feed mostra anúncios cujo raio alcança você. Cadastre seu CEP ou cidade no perfil para ver o que procuram por perto."
+            acao={{ rotulo: "Cadastrar localização", para: "/perfil" }}
+          />
         </div>
       </>
     );
@@ -181,7 +291,6 @@ export default function Feed() {
               acoesDoCard={acoesDaRecomendacao}
             />
 
-            {!autenticado && <FaixaDeConversao />}
 
             <GradeDeAnuncios itens={segundoBloco} />
 

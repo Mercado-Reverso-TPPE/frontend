@@ -15,10 +15,13 @@ interface ResumoDaListaProps {
   total: number;
   ordenacao: OrdenacaoDoFeed;
   aoMudarOrdenacao: (ordenacao: OrdenacaoDoFeed) => void;
+  /** Sem a localização do visitante não há "mais próximos". */
+  semDistancia?: boolean;
 }
 
 /** Linha acima da grade: quantos anúncios o filtro trouxe e como ordená-los. */
-export function ResumoDaLista({ total, ordenacao, aoMudarOrdenacao }: ResumoDaListaProps) {
+export function ResumoDaLista({ total, ordenacao, aoMudarOrdenacao, semDistancia = false }: ResumoDaListaProps) {
+  const opcoes = semDistancia ? ORDENACOES.filter((opcao) => opcao.valor !== "distancia") : ORDENACOES;
   return (
     <div className={estilos.resumo}>
       <h2 className={estilos.resumoTitulo}>{fmtPlural(total, "anúncio")}</h2>
@@ -34,7 +37,7 @@ export function ResumoDaLista({ total, ordenacao, aoMudarOrdenacao }: ResumoDaLi
             value={ordenacao}
             onChange={(evento) => aoMudarOrdenacao(evento.target.value as OrdenacaoDoFeed)}
           >
-            {ORDENACOES.map((opcao) => (
+            {opcoes.map((opcao) => (
               <option key={opcao.valor} value={opcao.valor}>
                 {opcao.rotulo}
               </option>

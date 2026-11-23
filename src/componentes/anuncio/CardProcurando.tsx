@@ -4,6 +4,7 @@ import { Avatar, Badge, Botao } from "@/componentes/base";
 import { IPin, IStar, ITag } from "@/componentes/icones";
 import { catColor } from "@/estilos/tokens";
 import { fmtDistancia, fmtNota, fmtTempoRelativo } from "@/utils/formato";
+import { entrarComRetorno } from "@/utils/navegacao";
 import { faixaCompactaDoAnuncio, localDoAnuncio } from "./faixa";
 import { corDaPessoa, iniciaisDe, nomeCurto } from "./pessoa";
 import estilos from "./Cards.module.css";
@@ -12,12 +13,20 @@ import estilos from "./Cards.module.css";
  * Card de anúncio de "procura-se" (QRO-07), no layout do protótipo do feed.
  * O rodapé mostra o comprador só quando a API envia o resumo público dele;
  * sem isso, fica a contagem de ofertas.
+ *
+ * Em modo `publico` (home do visitante) o card mostra só título, categoria,
+ * orçamento, cidade/UF e data, e todo clique leva a entrar com retorno ao
+ * anúncio ou à oferta.
  */
-export function CardProcurando({ anuncio }: { anuncio: Anuncio }) {
+export function CardProcurando({ anuncio, publico = false }: { anuncio: Anuncio; publico?: boolean }) {
   const corDaCategoria = catColor(anuncio.categoriaNome);
   const disputado = anuncio.ofertasRecebidas >= 5;
   const local = localDoAnuncio(anuncio);
   const comprador = anuncio.compradorPublico;
+  const linkDoAnuncio = publico ? entrarComRetorno(`/anuncios/${anuncio.id}`) : `/anuncios/${anuncio.id}`;
+  const linkDaOferta = publico
+    ? entrarComRetorno(`/anuncios/${anuncio.id}/ofertar`)
+    : `/anuncios/${anuncio.id}/ofertar`;
 
   return (
     <article className={estilos.card}>
@@ -36,12 +45,12 @@ export function CardProcurando({ anuncio }: { anuncio: Anuncio }) {
       </div>
 
       <h3 className={estilos.titulo}>
-        <Link className={estilos.link} to={`/anuncios/${anuncio.id}`}>
+        <Link className={estilos.link} to={linkDoAnuncio}>
           {anuncio.titulo}
         </Link>
       </h3>
 
-      <p className={`${estilos.descricao} truncar-2`}>{anuncio.descricao}</p>
+      {!publico && <p className={`${estilos.descricao} truncar-2`}>{anuncio.descricao}</p>}
 
       <div className={estilos.orcamento}>
         <span className={estilos.orcamentoRotulo}>Orçamento</span>
@@ -82,18 +91,22 @@ export function CardProcurando({ anuncio }: { anuncio: Anuncio }) {
           </>
         )}
 
-        <div className={estilos.ofertas}>
-          <div className={`${estilos.ofertasNumero} ${disputado ? estilos.ofertasDisputadas : ""}`}>
-            {anuncio.ofertasRecebidas}
+        {publico ? (
+          <span className={estilos.convite}>Entre para ver detalhes e ofertar</span>
+        ) : (
+          <div className={estilos.ofertas}>
+            <div className={`${estilos.ofertasNumero} ${disputado ? estilos.ofertasDisputadas : ""}`}>
+              {anuncio.ofertasRecebidas}
+            </div>
+            <div className={estilos.ofertasRotulo}>oferta{anuncio.ofertasRecebidas === 1 ? "" : "s"}</div>
           </div>
-          <div className={estilos.ofertasRotulo}>oferta{anuncio.ofertasRecebidas === 1 ? "" : "s"}</div>
-        </div>
+        )}
 
         <Botao
           variante="suave"
           tamanho="pequeno"
           className={estilos.acao}
-          para={`/anuncios/${anuncio.id}/ofertar`}
+          para={linkDaOferta}
           aria-label={`Ofertar no anúncio ${anuncio.titulo}`}
         >
           Ofertar
