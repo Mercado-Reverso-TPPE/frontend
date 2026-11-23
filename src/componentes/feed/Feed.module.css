@@ -502,3 +502,104 @@
     border-radius: var(--raio-modal) var(--raio-modal) 0 0;
   }
 }
+
+/* ── Home pública ───────────────────────────── */
+.localidade {
+  max-width: 220px;
+}
+
+/* Convite para entrar: mesma faixa da conversão, mas com dois botões e a lista do que se ganha. */
+.convite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-3);
+  padding: var(--espaco-3) var(--espaco-4);
+  border-radius: var(--raio-modal);
+  background: var(--gradiente-faixa);
+  box-shadow: 0 8px 24px rgba(217, 115, 56, 0.28);
+}
+
+.conviteTexto {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.conviteBeneficios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px var(--espaco-3);
+  margin: var(--espaco-1-5) 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-meta);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.conviteAcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+}
+
+.conviteBotaoPrincipal,
+.conviteBotaoSecundario {
+  padding: var(--espaco-1-5) var(--espaco-3);
+  border-radius: 10px;
+  font-family: var(--fonte-titulo);
+  font-size: 15px;
+  font-weight: var(--peso-bold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.conviteBotaoPrincipal {
+  background-color: var(--fundo-elevado);
+  color: var(--laranja);
+}
+
+.conviteBotaoSecundario {
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  color: var(--texto-invertido);
+}
+
+/* Chamada discreta no meio e no fim da lista. */
+.conviteDiscreto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px dashed var(--borda);
+  border-radius: var(--raio-card);
+  background-color: var(--superficie);
+  font-family: var(--fonte-corpo);
+  font-size: var(--tamanho-corpo);
+  color: var(--texto-secundario);
+  text-align: center;
+}
+
+.conviteDiscretoLink {
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-bold);
+  color: var(--laranja);
+}
+
+@media (max-width: 640px) {
+  .convite {
+    padding: var(--espaco-3) var(--espaco-2);
+  }
+
+  .conviteAcoes {
+    width: 100%;
+  }
+
+  .conviteBotaoPrincipal,
+  .conviteBotaoSecundario {
+    flex: 1;
+    text-align: center;
+  }
+}

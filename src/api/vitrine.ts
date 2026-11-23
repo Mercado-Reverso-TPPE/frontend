@@ -86,6 +86,48 @@ export interface PaginaDaVitrine {
   proximo: string | null;
 }
 
+export interface RespostaPropostaVitrine {
+  id: string;
+  ofertaId: string;
+  anuncioId: string;
+  produtoId: string;
+  precoOriginal: number;
+  precoProposto: number;
+  status: string;
+}
+
+/**
+ * Propõe um valor de compra por um produto da vitrine do vendedor.
+ * O backend cria um Anúncio + Oferta automaticamente e inicia a negociação.
+ * Retorna o id da oferta, que serve de id da conversa (`/negociacoes/:ofertaId`).
+ */
+export async function proporCompraEmProduto(
+  produtoId: string,
+  dados: { preco: number; mensagem?: string },
+): Promise<RespostaPropostaVitrine> {
+  const resposta = await api.post<{
+    id: string;
+    oferta_id: string;
+    anuncio_id: string;
+    produto_id: string;
+    preco_original: string;
+    preco_proposto: string;
+    status: string;
+  }>(`/vitrine/${produtoId}/propostas`, {
+    preco: dados.preco,
+    mensagem: dados.mensagem ?? "",
+  });
+  return {
+    id: resposta.id,
+    ofertaId: resposta.oferta_id,
+    anuncioId: resposta.anuncio_id,
+    produtoId: resposta.produto_id,
+    precoOriginal: Number(resposta.preco_original),
+    precoProposto: Number(resposta.preco_proposto),
+    status: resposta.status,
+  };
+}
+
 // ── Recursos ────────────────────────────────────────────────────────────────
 
 /** Uma página de produtos à venda com os filtros do feed. */

@@ -122,11 +122,13 @@ describe("feed de anúncios", () => {
 });
 
 describe("feed de anúncios (API)", () => {
-  it("pede para entrar quando não há sessão", async () => {
-    const chamadas = apiComFeed();
+  it("sem sessão, não chama o feed autenticado (a home pública usa outra rota)", async () => {
+    const chamadas = apiComFeed(3, null, {
+      "GET /anuncios/publicos": () => ({ corpo: { count: 0, next: null, results: [] } }),
+    });
     renderizarAplicacao();
 
-    expect(await screen.findByRole("heading", { name: "Entre para ver anúncios perto de você" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Entre e o Quero. trabalha por você" })).toBeInTheDocument();
     expect(chamadas.some((chamada) => chamada.caminho === "/anuncios")).toBe(false);
   });
 

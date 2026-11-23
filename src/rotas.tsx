@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useParams, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, useParams, useSearchParams, type RouteObject } from "react-router";
 import LayoutApp from "@/componentes/layout/LayoutApp";
 import LayoutAutenticacao from "@/componentes/layout/LayoutAutenticacao";
 import { RotaPrivada } from "@/componentes/layout/RotaPrivada";
@@ -23,6 +23,7 @@ import OfertarProduto from "@/paginas/OfertarProduto";
 import OfertasRecebidas from "@/paginas/OfertasRecebidas";
 import Perfil from "@/paginas/Perfil";
 import RedefinirSenha from "@/paginas/RedefinirSenha";
+import { destinoSeguro, entrarComRetorno } from "@/utils/navegacao";
 
 /**
  * Contraproposta e aceite acontecem na tela da negociação, que é a da oferta.
@@ -31,6 +32,12 @@ import RedefinirSenha from "@/paginas/RedefinirSenha";
 function ParaANegociacao({ parametro }: { parametro: "id" | "ofertaId" }) {
   const parametros = useParams();
   return <Navigate to={`/negociacoes/${parametros[parametro] ?? ""}`} replace />;
+}
+
+/** `/login?next=…` é um apelido de `/entrar?retorno=…`, com a mesma validação do destino. */
+function ApelidoDeLogin() {
+  const [parametros] = useSearchParams();
+  return <Navigate to={entrarComRetorno(destinoSeguro(parametros.get("next")))} replace />;
 }
 
 /**
@@ -80,6 +87,7 @@ export const rotas: RouteObject[] = [
     Component: LayoutAutenticacao,
     children: [
       { path: "entrar", Component: Entrar },
+      { path: "login", Component: ApelidoDeLogin },
       { path: "cadastrar", Component: Cadastrar },
       { path: "redefinir-senha", Component: RedefinirSenha },
       { path: "confirmar-email", Component: ConfirmarEmail },

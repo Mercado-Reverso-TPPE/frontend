@@ -18,6 +18,7 @@ describe("listarFeed", () => {
       precoMax: 3000,
       distanciaMaxKm: 25,
       ordenacao: "recentes",
+      uf: "",
     });
 
     expect(pagina).toMatchObject({ total: 30, proximo: "abc" });

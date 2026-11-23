@@ -32,6 +32,8 @@ Negociação integrada à API (QRO-12 a QRO-16): em `/negociacoes/:id` (`:id` é
 
 Notificações, avaliação e histórico integrados à API (QRO-17 a QRO-19): central em cartões com ícone colorido por tipo, tempo relativo e destaque das não lidas (clicar marca como lida e abre o anúncio ou a negociação; o sino atualiza na hora), preferências por canal numa aba separada (segurança da conta não desliga), sino com a contagem real, avaliação de 1 a 5 com comentário opcional e histórico com cartões de resumo (concluídas, volume e total), uma trilha única de filtros (Todos, Compras, Vendas, Encerradas) e valores com sinal (compra em laranja, venda em verde), com detalhe de valores e mensagens.
 
+Home pública: sem sessão, `/` lista os "procura-se" ativos do Brasil inteiro via `GET /anuncios/publicos`, com seletor de localidade (Brasil ou uma das 27 UFs, em `?uf=`) somado a busca, categoria, preço e ordenação. O card fica só com o superficial (título, categoria, orçamento, cidade/UF e data) e qualquer clique leva a `/entrar?retorno=<destino>`; `/login?next=<destino>` é um apelido. A aba Vendendo só convida a entrar. Um convite no topo, e lembretes discretos na lista, explicam o que se ganha com a conta. Ao entrar, o cache público é descartado e o feed passa a ser o geolocalizado.
+
 Telas e componentes usam CSS Modules sobre os tokens: nenhum `style={{…}}` traz cor, fonte ou espaçamento literal, e não existem dados de demonstração: tudo vem do backend. `src/testes/arquitetura.test.ts` quebra a suíte se algum estilo literal ou import de dados falsos voltar. Os estilos que ainda passam por `style` são medidas calculadas a partir de props (tamanho do avatar e do logotipo, largura do esqueleto), via variáveis CSS. Nenhuma tela representa transação persistida.
 
 ## Arquitetura e diretórios
@@ -78,8 +80,8 @@ src/
 
 | Rota | Tela | Sessão |
 | :--- | :--- | :--- |
-| `/` | Feed com busca, filtros combinados, paginação e carrosséis | pública (com a API, pede para entrar) |
-| `/entrar` · `/cadastrar` | Autenticação, criação de conta e pedido de nova senha | pública |
+| `/` | Feed com busca, filtros combinados, paginação e carrosséis; sem sessão, a home pública nacional com filtro por UF | pública |
+| `/entrar` · `/cadastrar` · `/login?next=` | Autenticação, criação de conta e pedido de nova senha | pública |
 | `/redefinir-senha?uid=…&token=…` | Nova senha a partir do link enviado por e-mail | pública |
 | `/confirmar-email?token=…` | Confirma a troca de e-mail a partir do link enviado | pública |
 | `/anuncios/:id` | Detalhe do anúncio | pública |

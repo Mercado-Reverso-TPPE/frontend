@@ -24,6 +24,8 @@ export interface FiltrosDoFeed {
   precoMax: number | null;
   distanciaMaxKm: number | null;
   ordenacao: OrdenacaoDoFeed;
+  /** Sigla do estado na home pública; vazio é o Brasil inteiro. O feed de quem entrou ignora. */
+  uf: string;
 }
 
 export const FILTROS_PADRAO: FiltrosDoFeed = {
@@ -34,6 +36,7 @@ export const FILTROS_PADRAO: FiltrosDoFeed = {
   precoMax: null,
   distanciaMaxKm: null,
   ordenacao: "distancia",
+  uf: "",
 };
 
 export interface PaginaDoFeed {

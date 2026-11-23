@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { FILTROS_PADRAO, type FiltrosDoFeed, type OrdenacaoDoFeed, type TipoDoFeed } from "@/api/anuncios";
+import { ufValida } from "@/utils/ufs";
 
 const ORDENACOES: OrdenacaoDoFeed[] = ["distancia", "recentes", "preco_minimo", "preco_maximo"];
 const TIPOS: TipoDoFeed[] = ["todos", "procurando", "vendendo"];
@@ -20,6 +21,7 @@ const CHAVES = {
   precoMax: "preco_max",
   distanciaMaxKm: "distancia",
   ordenacao: "ordenar",
+  uf: "uf",
 } as const satisfies Record<keyof FiltrosDoFeed, string>;
 
 /**
@@ -43,6 +45,7 @@ export function useFiltros() {
       precoMax: numero(parametros.get(CHAVES.precoMax)),
       distanciaMaxKm: numero(parametros.get(CHAVES.distanciaMaxKm)),
       ordenacao: ordenacao && ORDENACOES.includes(ordenacao) ? ordenacao : FILTROS_PADRAO.ordenacao,
+      uf: ufValida(parametros.get(CHAVES.uf)),
     };
   }, [parametros]);
 
@@ -64,7 +67,8 @@ export function useFiltros() {
           }
           return proximos;
         },
-        { replace: true },
+        // Trocar de estado é navegação (o "voltar" desfaz); os demais filtros só ajustam a busca.
+        { replace: !("uf" in mudancas) },
       );
     },
     [definirParametros],

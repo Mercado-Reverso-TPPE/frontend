@@ -13,3 +13,8 @@
   display: flex;
   justify-content: center;
 }
+
+/* Convite da home pública, entre o hero e a barra de filtros. */
+.convite {
+  padding-top: var(--espaco-3);
+}

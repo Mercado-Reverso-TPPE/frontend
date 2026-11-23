@@ -36,13 +36,12 @@ describe("CardVendendo", () => {
     expect(screen.getByText("284")).toBeInTheDocument();
   });
 
-  it("mostra o vendedor e leva a ofertar", () => {
-    renderizar(<CardVendendo produto={produto} paraOfertar="/anunciar" />);
+  it("mostra o vendedor e o botão de ofertar", () => {
+    renderizar(<CardVendendo produto={produto} />);
 
     expect(screen.getByText("Lucas T.")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Foto de Lucas T." })).toHaveTextContent("LT");
     expect(screen.getByText("4,9")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: `Ofertar por ${produto.titulo}` })).toHaveAttribute("href", "/anunciar");
+    expect(screen.getByRole("button", { name: `Ofertar por ${produto.titulo}` })).toBeInTheDocument();
   });
 
   it("sem foto, mostra o placeholder com o ícone da categoria", () => {
@@ -57,7 +56,7 @@ describe("CardVendendo", () => {
     renderizar(<CardVendendo produto={{ ...produto, vendedor: null }} />);
 
     expect(screen.queryByText("Lucas T.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Ofertar por/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ofertar por/ })).toBeInTheDocument();
   });
 
   it("converte o produto da API com a primeira foto e o resumo do vendedor", () => {
