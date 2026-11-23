@@ -4,6 +4,7 @@ import re
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
 
 from .base import Pagina, literal_xpath
 
@@ -65,3 +66,52 @@ class Feed(Pagina):
         link.click()
         self.esperar_caminho(destino)
         return destino
+
+    # ── Home pública (visitante) ─────────────────────────────────────────
+    def convite(self):
+        return self.espera.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "section[aria-labelledby='convite-titulo']"))
+        )
+
+    def seletor_de_localidade(self) -> Select:
+        return Select(
+            self.espera.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "select[aria-label='Localidade']")))
+        )
+
+    def filtrar_por_uf(self, sigla: str):
+        self.seletor_de_localidade().select_by_value(sigla)
+        self.espera.until(lambda _: self.parametros.get("uf") == sigla)
+        return self
+
+    def filtrar_por_categoria_com_resultados(self) -> str:
+        """Clica no primeiro chip (depois de "Todos") cuja contagem é maior que zero."""
+
+        def chip_com_resultado(_):
+            for chip in self.chips_de_categoria()[1:]:
+                partes = chip.text.split("\n")
+                if len(partes) > 1 and partes[-1].strip().isdigit() and int(partes[-1]) > 0:
+                    return chip
+            return False
+
+        chip = self.espera.until(chip_com_resultado)
+        nome = chip.text.split("\n")[0].strip()
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", chip)
+        chip.click()
+        self.espera.until(lambda _: "categoria" in self.parametros)
+        return nome
+
+    def cards(self):
+        return [card for card in self.driver.find_elements(By.CSS_SELECTOR, "main article") if card.is_displayed()]
+
+    def clicar_no_primeiro_card(self) -> tuple[str, str]:
+        """Clica no título do primeiro card e devolve (título, destino do link)."""
+        link = self.espera.until(
+            lambda _: next(
+                (card.find_element(By.CSS_SELECTOR, "h3 a") for card in self.cards()),
+                False,
+            )
+        )
+        titulo, destino = link.text.strip(), link.get_attribute("href")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", link)
+        link.click()
+        return titulo, destino
