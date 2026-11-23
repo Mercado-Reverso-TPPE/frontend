@@ -10,7 +10,7 @@ export function Rodape() {
       <div className={estilos.faixa}>
         <Logo tamanho={26} />
         <span className={estilos.assinatura}>
-          © {ANO} Quero. Plataforma de compras reversa.
+          © {ANO} quero. Plataforma de compras reversa.
         </span>
         <nav className={estilos.links} aria-label="Links institucionais">
           {["Sobre", "Termos", "Privacidade", "Ajuda"].map((rotulo) => (

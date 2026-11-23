@@ -18,7 +18,7 @@ export function ConviteParaEntrar({ retorno = "/" }: { retorno?: string }) {
     <section className={estilos.convite} aria-labelledby="convite-titulo">
       <div className={estilos.conviteTexto}>
         <h2 id="convite-titulo" className={estilos.faixaTitulo}>
-          Entre e o Quero. trabalha por você
+          Entre e o quero. trabalha por você
         </h2>
         <p className={estilos.faixaApoio}>
           Você está vendo o que se procura no Brasil. Com uma conta, a sua região filtra tudo sozinha.

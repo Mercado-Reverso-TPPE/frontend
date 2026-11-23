@@ -22,7 +22,7 @@ export function Logo({ tamanho = 34, link = true }: { tamanho?: number; link?: b
   );
 
   return link ? (
-    <Link to="/" className={estilos.logo} style={tamanhoDoLogo} aria-label="Quero., página inicial">
+    <Link to="/" className={estilos.logo} style={tamanhoDoLogo} aria-label="quero., página inicial">
       {marca}
     </Link>
   ) : (
